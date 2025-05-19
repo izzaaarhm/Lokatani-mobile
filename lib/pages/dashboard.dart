@@ -184,7 +184,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
             image: const DecorationImage(
-              image: AssetImage('assets/images/vegetable_placeholder.jpg'),
+              image: AssetImage('assets/images/image.png'),
               fit: BoxFit.cover,
             ),
           ),

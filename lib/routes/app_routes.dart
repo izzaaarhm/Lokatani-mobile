@@ -4,8 +4,11 @@ import '../pages/register.dart';
 import '../pages/change_pass.dart';
 import '../pages/dashboard.dart';
 import '../pages/weighing.dart';
+import '../pages/profile.dart';
+import '../pages/edit_profile.dart';
+import '../pages/history.dart';
+import '../pages/weighing_detail.dart';
 
-// Define route names as constants to avoid typos
 class Routes {
   static const String login = '/';
   static const String register = '/register';
@@ -16,6 +19,7 @@ class Routes {
   static const String addWeighing = '/add-weighing';
   static const String weighingDetail = '/weighing-detail';
   static const String tutorial = '/tutorial';
+  static const String editProfile = '/edit-profile';
   
   // Add all routes here for easy access
   static Map<String, WidgetBuilder> getRoutes() {
@@ -24,11 +28,11 @@ class Routes {
       register: (context) => const RegisterScreen(),
       forgotPassword: (context) => const ChangePasswordScreen(),
       dashboard: (context) => const DashboardScreen(),
-      // to be implemented
       addWeighing: (context) => const WeighingPage(),
-      // profile: (context) => const ProfileScreen(),
-      // history: (context) => const HistoryScreen(),
-      // weighingDetail: (context) => const WeighingDetailScreen(),
+      profile: (context) => const ProfileScreen(),
+      history: (context) => const HistoryScreen(),
+      weighingDetail: (context) => const WeighingDetailScreen(),
+      editProfile: (context) => const EditProfileScreen(),
       // tutorial: (context) => const TutorialScreen(),
     };
   }

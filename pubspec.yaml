@@ -45,6 +45,11 @@ dependencies:
   path: ^1.8.3
   path_provider: ^2.1.1
   flutter_image_compress: ^2.4.0
+  flutter_secure_storage: ^8.0.0
+
+  firebase_core: ^2.15.1
+  firebase_auth: ^4.9.0
+  cloud_firestore: ^4.9.1
 
 dev_dependencies:
   flutter_test:

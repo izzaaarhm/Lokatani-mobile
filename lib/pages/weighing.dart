@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'camera_page.dart';
 
-// Main weighing page that includes the dialog and weighing functionality
 class WeighingPage extends StatefulWidget {
   const WeighingPage({super.key});
 
