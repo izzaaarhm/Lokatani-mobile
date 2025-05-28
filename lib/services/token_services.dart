@@ -1,23 +1,33 @@
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
 class TokenService {
-  static const storage = FlutterSecureStorage();
-  
-  static Future<void> saveTokens(String accessToken, String refreshToken) async {
-    await storage.write(key: 'auth_token', value: accessToken);
-    await storage.write(key: 'refresh_token', value: refreshToken);
+  // Mendapatkan Firebase ID Token untuk API calls
+  static Future<String?> getFirebaseIdToken() async {
+    try {
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        return await currentUser.getIdToken();
+      }
+      return null;
+    } catch (e) {
+      print('Error getting Firebase ID token: $e');
+      return null;
+    }
   }
   
-  static Future<String?> getAccessToken() async {
-    return await storage.read(key: 'auth_token');
+  // Method untuk refresh Firebase ID Token jika diperlukan
+  static Future<String?> getFirebaseIdTokenWithRefresh({bool forceRefresh = false}) async {
+    try {
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        return await currentUser.getIdToken(forceRefresh);
+      }
+      return null;
+    } catch (e) {
+      print('Error getting Firebase ID token: $e');
+      return null;
+    }
   }
   
-  static Future<String?> getRefreshToken() async {
-    return await storage.read(key: 'refresh_token');
-  }
-  
-  static Future<void> clearTokens() async {
-    await storage.delete(key: 'auth_token');
-    await storage.delete(key: 'refresh_token');
-  }
+  static Future<void> clearTokens() async {}
 }

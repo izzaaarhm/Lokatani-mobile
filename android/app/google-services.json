@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "207122022079",
+    "project_id": "pk-lokatani",
+    "storage_bucket": "pk-lokatani.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:207122022079:android:c136f7893eb2d587f1900a",
+        "android_client_info": {
+          "package_name": "com.example.lokatech_timbangan"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCCVJ-hVqSbnE6eBgGSLslx7rMXmiDuLiQ"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

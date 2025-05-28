@@ -1,7 +1,65 @@
 import 'package:flutter/material.dart';
+import '../services/auth_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 
-class ProfileScreen extends StatelessWidget {
+class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
+
+  @override
+  State<ProfileScreen> createState() => _ProfileScreenState();
+}
+
+class _ProfileScreenState extends State<ProfileScreen> {
+  final AuthService _authService = AuthService();
+  bool _isLoading = true;
+  String _name = '';
+  String _email = '';
+  String _userId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+      
+      // Get current Firebase user
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser != null) {
+        // Get user ID from Firebase
+        _userId = currentUser.uid;
+        
+        // Try to get profile data with additional Firestore information
+        final userData = await _authService.getProfile(_userId);
+        
+        setState(() {
+          _name = userData['name'] ?? currentUser.displayName ?? 'User';
+          _email = userData['email'] ?? currentUser.email ?? 'user@example.com';
+          _isLoading = false;
+        });
+      } else {
+        // Not logged in
+        setState(() {
+          _name = 'User';
+          _email = 'user@example.com';
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _name = 'User';
+        _email = 'user@example.com';
+        _isLoading = false;
+      });
+      print('Error loading profile: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -17,78 +75,80 @@ class ProfileScreen extends StatelessWidget {
         centerTitle: true,
       ),
       body: SafeArea(
-        child: Column(
-          children: [
-            // Profile header section
-            Container(
-              padding: const EdgeInsets.all(24),
-              width: double.infinity,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
+        child: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : Column(
                 children: [
-                  // Profile image
-                  const CircleAvatar(
-                    radius: 48,
-                    backgroundImage: AssetImage('assets/images/profile_placeholder.jpg'),
-                  ),
-                  const SizedBox(height: 16),
-                  // User name and email
-                  const Text(
-                    'Agus',
-                    style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
+                  // Profile header section
+                  Container(
+                    padding: const EdgeInsets.all(24),
+                    width: double.infinity,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.center,
+                      children: [
+                        // Profile image
+                        const CircleAvatar(
+                          radius: 48,
+                          backgroundImage: AssetImage('assets/images/profile_placeholder.jpg'),
+                        ),
+                        const SizedBox(height: 16),
+                        // User name and email
+                        Text(
+                          _name,
+                          style: const TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                        Text(
+                          _email,
+                          style: const TextStyle(
+                            fontSize: 14,
+                            color: Colors.grey,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
-                  const Text(
-                    'agus@lokatani.id',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: Colors.grey,
+
+                  // Account Settings section
+                  const Padding(
+                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Pengaturan Akun',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                     ),
+                  ),
+
+                  // Account settings options
+                  _buildSettingsItem(
+                    context,
+                    Icons.person_outline,
+                    'Ubah Profil',
+                    () => Navigator.pushNamed(context, '/edit-profile'),
+                  ),
+                  _buildSettingsItem(
+                    context,
+                    Icons.lock_outline,
+                    'Ubah Password',
+                    () => Navigator.pushNamed(context, '/forgot-password'),
+                  ),
+                  _buildSettingsItem(
+                    context,
+                    Icons.logout,
+                    'Log Out',
+                    () => _showLogoutDialog(context),
+                    textColor: Colors.red,
+                    iconColor: Colors.red,
                   ),
                 ],
               ),
-            ),
-
-            // Account Settings section
-            const Padding(
-              padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Pengaturan Akun',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.w600,
-                  ),
-                ),
-              ),
-            ),
-
-            // Account settings options
-            _buildSettingsItem(
-              context,
-              Icons.person_outline,
-              'Ubah Profil',
-              () => Navigator.pushNamed(context, '/edit-profile'),
-            ),
-            _buildSettingsItem(
-              context,
-              Icons.lock_outline,
-              'Ubah Password',
-              () => Navigator.pushNamed(context, '/forgot-password'),
-            ),
-            _buildSettingsItem(
-              context,
-              Icons.logout,
-              'Log Out',
-              () => _showLogoutDialog(context),
-              textColor: Colors.red,
-              iconColor: Colors.red,
-            ),
-          ],
-        ),
       ),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
@@ -225,7 +285,8 @@ class ProfileScreen extends StatelessWidget {
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed: () {
+                        onPressed: () async {
+                          await _authService.logout();
                           Navigator.of(context).pop();
                           Navigator.pushReplacementNamed(context, '/');
                         },

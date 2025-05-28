@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import '../services/auth_services.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/bottom_nav.dart';
-
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -10,6 +11,45 @@ class DashboardScreen extends StatefulWidget {
 
 class _DashboardScreenState extends State<DashboardScreen> {
   int _currentIndex = 0;
+  final AuthService _authService = AuthService();
+  String _name = '';
+  String _userId = '';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadUserData();
+  }
+
+  Future<void> _loadUserData() async {
+    try {
+      
+      // Get current Firebase user
+      final User? currentUser = FirebaseAuth.instance.currentUser;
+      
+      if (currentUser != null) {
+        // Get user ID from Firebase
+        _userId = currentUser.uid;
+        
+        // Try to get profile data with additional Firestore information
+        final userData = await _authService.getProfile(_userId);
+        
+        setState(() {
+          _name = userData['name'] ?? currentUser.displayName ?? 'User';
+        });
+      } else {
+        // Not logged in
+        setState(() {
+          _name = 'User';
+        });
+      }
+    } catch (e) {
+      setState(() {
+        _name = 'User';
+      });
+      print('Error loading profile: $e');
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -52,8 +92,8 @@ class _DashboardScreenState extends State<DashboardScreen> {
                               ),
                             ),
                             const SizedBox(height: 4),
-                            const Text(
-                              'Selamat Datang, User',
+                            Text(
+                              'Selamat Datang, $_name',
                               style: TextStyle(
                                 fontSize: 14,
                                 color: Color(0xFF494A50),

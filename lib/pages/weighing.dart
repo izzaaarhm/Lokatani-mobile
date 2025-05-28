@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'camera_page.dart';
+import '../services/batch_services.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
 class WeighingPage extends StatefulWidget {
   const WeighingPage({super.key});
@@ -13,6 +16,9 @@ class _WeighingPageState extends State<WeighingPage> {
   bool _isLoading = true;
   List<VegetableItem> _detectedItems = [];
   bool _showDialog = true;
+  String? _batchId;
+  StreamSubscription? _weightSubscription;
+  final BatchService _batchService = BatchService();
   
   @override
   void initState() {
@@ -21,20 +27,85 @@ class _WeighingPageState extends State<WeighingPage> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showWeighingTypeDialog();
     });
+  }
+  
+  @override
+  void dispose() {
+    _weightSubscription?.cancel();
+    super.dispose();
+  }
+
+  // Initialize a new batch and start listening for weight updates
+  Future<void> _initializeBatchAndListenForWeights() async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    final result = await _batchService.initiateBatch();
     
-    // Simulate loading data
-    Timer(const Duration(seconds: 3), () {
-      if (mounted) {
+    if (result['success']) {
+      _batchId = result['data']['batch_id'];
+      
+      // Start listening for weight updates
+      _startListeningForWeightUpdates();
+    } else {
+      // Show error
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(result['message'] ?? 'Failed to start weighing session'))
+      );
+    }
+  }
+
+  // Listen for real-time weight updates from Firestore
+  void _startListeningForWeightUpdates() {
+    _weightSubscription = _batchService.listenForWeightUpdates().listen((snapshot) {
+      if (snapshot.docs.isNotEmpty) {
+        final newItems = <VegetableItem>[];
+        int index = 1;
+        
+        for (var doc in snapshot.docs) {
+          final data = doc.data() as Map<String, dynamic>;
+          final timestamp = (data['timestamp'] as Timestamp).toDate();
+          final timeString = DateFormat('HH:mm:ss').format(timestamp);
+          final weight = (data['weight'] ?? 'xx').toString();
+          
+          newItems.add(
+            VegetableItem(
+              id: index++,
+              weight: weight,
+              time: timeString,
+            )
+          );
+        }
+        
         setState(() {
+          _detectedItems = newItems;
           _isLoading = false;
-          _detectedItems = [
-            VegetableItem(id: 1, weight: "xx", time: "09:30"),
-            VegetableItem(id: 2, weight: "xx", time: "09:33"),
-            VegetableItem(id: 3, weight: "xx", time: "09:37"),
-          ];
         });
       }
+    }, onError: (error) {
+      print('Error listening for weight updates: $error');
     });
+  }
+
+  // Complete the current batch and navigate to camera page
+  Future<void> _navigateToCameraPage() async {
+    if (_batchId != null) {
+      final result = await _batchService.completeBatch(_batchId!);
+      
+      if (!result['success']) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(result['message'] ?? 'Failed to complete weighing session'))
+        );
+        return;
+      }
+    }
+    
+    // Navigate to camera page
+    Navigator.push(
+      context, 
+      MaterialPageRoute(builder: (context) => const CameraPage())
+    );
   }
   
   void _showWeighingTypeDialog() {
@@ -72,54 +143,38 @@ class _WeighingPageState extends State<WeighingPage> {
                   ),
                   const SizedBox(height: 8),
                   const Text(
-                    'Klik "Produk" jika sekarang Anda ingin menimbang sayur yang akan dikemas',
-                    textAlign: TextAlign.center,
+                    'Pilih "Produk" jika sekarang Anda ingin menimbang sayur yang akan dikemas',
                     style: TextStyle(
+                      color: Colors.grey,
                       fontSize: 14,
-                      color: Colors.black87,
                     ),
+                    textAlign: TextAlign.center,
                   ),
-                  const SizedBox(height: 20),
+                  const SizedBox(height: 24),
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                     children: [
-                      Expanded(
-                        child: OutlinedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            setState(() {
-                              _showDialog = false;
-                            });
-                          },
-                          style: OutlinedButton.styleFrom(
-                            side: const BorderSide(color: Color(0xFF1E5128)),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                          ),
-                          child: const Text(
-                            'Rompes',
-                            style: TextStyle(color: Color(0xFF1E5128)),
-                          ),
-                        ),
+                      _buildOptionButton(
+                        icon: Icons.shopping_basket,
+                        label: 'Produk',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          setState(() {
+                            _showDialog = false;
+                          });
+                          _initializeBatchAndListenForWeights();
+                        }
                       ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: ElevatedButton(
-                          onPressed: () {
-                            Navigator.of(context).pop();
-                            setState(() {
-                              _showDialog = false;
-                            });
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: const Color(0xFF1E5128),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(25),
-                            ),
-                          ),
-                          child: const Text('Produk'),
-                        ),
+                      _buildOptionButton(
+                        icon: Icons.recycling,
+                        label: 'Rompes',
+                        onTap: () {
+                          Navigator.of(context).pop();
+                          setState(() {
+                            _showDialog = false;
+                          });
+                          _initializeBatchAndListenForWeights();
+                        }
                       ),
                     ],
                   ),
@@ -132,31 +187,44 @@ class _WeighingPageState extends State<WeighingPage> {
     }
   }
 
-  void _navigateToCameraPage() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => const CameraPage(),
+  Widget _buildOptionButton({
+    required IconData icon, 
+    required String label, 
+    required VoidCallback onTap
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: Column(
+          children: [
+            Icon(icon, size: 48, color: const Color(0xFF3F7C35)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
-        elevation: 0,
         leading: IconButton(
-          icon: Container(
-            padding: const EdgeInsets.all(8),
-            decoration: const BoxDecoration(
-              color: Color(0xFFE8F5E9),
-              shape: BoxShape.circle,
-            ),
-            child: const Icon(Icons.arrow_back, color: Colors.black54, size: 20),
-          ),
-          onPressed: () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Timbang Sayuran',
@@ -197,7 +265,7 @@ class _WeighingPageState extends State<WeighingPage> {
                         ),
                         SizedBox(height: 16),
                         Text(
-                          'Loading...',
+                          'Menunggu timbangan...',
                           style: TextStyle(
                             color: Colors.grey,
                             fontSize: 16,
@@ -207,51 +275,15 @@ class _WeighingPageState extends State<WeighingPage> {
                     ),
                   )
                 : ListView.builder(
-                    itemCount: _detectedItems.length + 1, // +1 for the loading indicator at the end
+                    itemCount: _detectedItems.length + 1, 
                     padding: const EdgeInsets.symmetric(horizontal: 16),
                     itemBuilder: (context, index) {
-                      if (index < _detectedItems.length) {
-                        final item = _detectedItems[index];
-                        return VegetableListItem(vegetable: item);
-                      } else {
-                        // Show loading indicator at the end
-                        return const Padding(
-                          padding: EdgeInsets.symmetric(vertical: 24.0),
-                          child: Center(
-                            child: SizedBox(
-                              width: 50,
-                              height: 50,
-                              child: CircularProgressIndicator(
-                                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E5128)),
-                                strokeWidth: 4,
-                              ),
-                            ),
-                          ),
-                        );
-                      }
+                      final item = _detectedItems[index];
+                      return VegetableListItem(vegetable: item);
                     },
                   ),
           ),
         ],
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Beranda',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.history),
-            label: 'Riwayat',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profil',
-          ),
-        ],
-        currentIndex: 0,
-        selectedItemColor: const Color(0xFF1E5128),
-        unselectedItemColor: Colors.grey,
       ),
       floatingActionButton: Container(
         margin: const EdgeInsets.only(bottom: 60),

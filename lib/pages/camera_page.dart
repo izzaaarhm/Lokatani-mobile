@@ -5,6 +5,7 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:image/image.dart' as img;
 
 class CameraPage extends StatefulWidget {
   const CameraPage({super.key});
@@ -40,6 +41,38 @@ class _CameraPageState extends State<CameraPage> {
     }
   }
 
+  Future<File> _cropToSquare(String imagePath) async {
+    // Baca file gambar
+    final bytes = await File(imagePath).readAsBytes();
+    final originalImage = img.decodeImage(bytes)!;
+    
+    // Tentukan ukuran square (ambil yang terkecil antara width dan height)
+    final size = originalImage.width < originalImage.height 
+        ? originalImage.width 
+        : originalImage.height;
+    
+    // Hitung offset untuk crop dari center
+    final offsetX = (originalImage.width - size) ~/ 2;
+    final offsetY = (originalImage.height - size) ~/ 2;
+    
+    // Crop gambar menjadi square
+    final croppedImage = img.copyCrop(
+      originalImage,
+      x: offsetX,
+      y: offsetY,
+      width: size,
+      height: size,
+    );
+    
+    final croppedBytes = img.encodeJpg(croppedImage);
+    final dir = await getTemporaryDirectory();
+    final croppedPath = path.join(dir.path, "cropped_${DateTime.now().millisecondsSinceEpoch}.jpg");
+    final croppedFile = File(croppedPath);
+    await croppedFile.writeAsBytes(croppedBytes);
+    
+    return croppedFile;
+  }
+
   Future<XFile?> _compressImage(File file) async {
     final dir = await getTemporaryDirectory();
     final targetPath = path.join(dir.path, "compressed_${DateTime.now().millisecondsSinceEpoch}.jpg");
@@ -60,15 +93,27 @@ class _CameraPageState extends State<CameraPage> {
       _isProcessing = true;
     });
 
-    final file = await _cameraController!.takePicture();
-    final compressed = await _compressImage(File(file.path));
+    try {
+      final file = await _cameraController!.takePicture();
+      
+      // crop menjadi rasio 1:1
+      final croppedFile = await _cropToSquare(file.path);
+      
+      // compress
+      final compressed = await _compressImage(croppedFile);
 
-    setState(() {
-      _isProcessing = false;
-    });
+      setState(() {
+        _isProcessing = false;
+      });
 
-    if (compressed != null) {
-      _navigateToPreview(compressed.path);
+      if (compressed != null) {
+        _navigateToPreview(compressed.path);
+      }
+    } catch (e) {
+      setState(() {
+        _isProcessing = false;
+      });
+      print('Error taking picture: $e');
     }
   }
 
@@ -80,14 +125,25 @@ class _CameraPageState extends State<CameraPage> {
         _isProcessing = true;
       });
 
-      final compressed = await _compressImage(File(pickedFile.path));
-      
-      setState(() {
-        _isProcessing = false;
-      });
-      
-      if (compressed != null) {
-        _navigateToPreview(compressed.path);
+      try {
+        // Crop menjadi square terlebih dahulu
+        final croppedFile = await _cropToSquare(pickedFile.path);
+        
+        // Kemudian compress
+        final compressed = await _compressImage(croppedFile);
+        
+        setState(() {
+          _isProcessing = false;
+        });
+        
+        if (compressed != null) {
+          _navigateToPreview(compressed.path);
+        }
+      } catch (e) {
+        setState(() {
+          _isProcessing = false;
+        });
+        print('Error processing gallery image: $e');
       }
     }
   }
@@ -98,6 +154,56 @@ class _CameraPageState extends State<CameraPage> {
       MaterialPageRoute(
         builder: (context) => PhotoPreviewPage(imagePath: imagePath),
       ),
+    );
+  }
+
+  Widget _buildSquareCameraPreview() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
+    return Stack(
+      children: [
+        // Fullscreen camera preview
+        Positioned.fill(
+          child: CameraPreview(_cameraController!),
+        ),
+        // Overlay gelap di luar area square
+        Positioned.fill(
+          child: Container(
+            color: Colors.black54,
+            child: Center(
+              child: Container(
+                width: screenWidth * 0.8,
+                height: screenWidth * 0.8,
+                decoration: BoxDecoration(
+                  color: Colors.transparent,
+                  border: Border.all(
+                    color: Colors.white,
+                    width: 2,
+                  ),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ),
+        // Area di tengah
+        Center(
+          child: Container(
+            width: screenWidth * 0.8,
+            height: screenWidth * 0.8,
+            decoration: BoxDecoration(
+              color: Colors.transparent,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: ClipRRect(
+              borderRadius: BorderRadius.circular(10),
+              child: Container(
+                color: Colors.transparent,
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 
@@ -129,7 +235,7 @@ class _CameraPageState extends State<CameraPage> {
                           ],
                         ),
                       )
-                    : CameraPreview(_cameraController!),
+                    : _buildSquareCameraPreview(),
                 Positioned(
                   bottom: 30,
                   left: 0,
@@ -170,7 +276,7 @@ class _CameraPageState extends State<CameraPage> {
                   right: 0,
                   child: Center(
                     child: Text(
-                      'Ambil foto sayur untuk memulai \npendeteksian jenis sayur',
+                      'Posisikan sayur di dalam kotak\nuntuk memulai pendeteksian jenis sayur',
                       textAlign: TextAlign.center,
                       style: TextStyle(color: Colors.white, fontSize: 16),
                     ),
@@ -225,7 +331,22 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
               style: TextStyle(fontSize: 18),
             ),
             const SizedBox(height: 16),
-            Image.file(File(widget.imagePath), height: 300),
+            // Tampilkan foto dalam container square
+            Container(
+              width: 300,
+              height: 300,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: Colors.grey.shade300),
+              ),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.file(
+                  File(widget.imagePath), 
+                  fit: BoxFit.cover,
+                ),
+              ),
+            ),
             const SizedBox(height: 8),
             Text(
               'Ukuran file: $fileSize',
