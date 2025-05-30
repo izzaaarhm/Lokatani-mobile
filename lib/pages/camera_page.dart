@@ -433,8 +433,8 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
           final resultReceivedTime = DateTime.now();
           final resultReceivedTimeStr = DateFormat('HH:mm:ss').format(resultReceivedTime);
           
-          // Navigate to result page
-          Navigator.pushReplacement(
+          // Navigate to result page and prevent going back
+          Navigator.pushAndRemoveUntil(
             context,
             MaterialPageRoute(
               builder: (context) => WeighingResultPage(
@@ -443,11 +443,12 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
                 totalWeight: '${data['total_weight'] ?? 0} Kg',
                 weighingDate: data['created_at'] != null
                     ? DateFormat('dd-MM-yyyy').format((data['created_at'] as Timestamp).toDate())
-                    : 'Unknown',
+                    : 'Unknown date',
                 photoSentTime: photoSentTimeStr,
                 resultReceivedTime: resultReceivedTimeStr,
               ),
             ),
+            (route) => false, // This prevents any routes from being accessible
           );
         }
       }

@@ -69,7 +69,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .collection('vegetable_batches')
             .where('user_id', isEqualTo: user.uid)
             .orderBy('created_at', descending: true)
-            .limit(5)
+            .limit(3)
             .get();
 
         setState(() {

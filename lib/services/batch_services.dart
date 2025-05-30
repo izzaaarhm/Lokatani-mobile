@@ -81,20 +81,15 @@ class BatchService {
   // Listen for weight changes from IoT device in Firestore while weighing
   Stream<QuerySnapshot> listenForWeightUpdates(String batchId) {
     print('DEBUG: Starting listener for batch: $batchId');
+
+    FirebaseAuth.instance.currentUser?.getIdToken(true);
+
     return _firestore
       .collection('vegetable_batches')
       .doc(batchId)
       .collection('weights')
       .orderBy('timestamp', descending: false)
       .snapshots();
-  }
-
-  // Listen for a specific batch by ID
-  Stream<DocumentSnapshot> listenForBatchById(String batchId) {
-    return _firestore
-        .collection('vegetable_batches')
-        .doc(batchId)
-        .snapshots();
   }
 
   Stream<DocumentSnapshot> listenForVegetableIdentification(String batchId) {
