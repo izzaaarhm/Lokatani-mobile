@@ -442,7 +442,7 @@ class VegetableListItem extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Berat: ${vegetable.weight} Kg',
+                  'Berat: ${vegetable.weight} Gram',
                   style: const TextStyle(
                     color: Colors.grey,
                     fontSize: 14,
