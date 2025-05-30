@@ -13,7 +13,7 @@ class WeighingPage extends StatefulWidget {
 }
 
 class _WeighingPageState extends State<WeighingPage> {
-  bool _isLoading = true;
+  bool _isLoading = false; // Ubah dari true ke false
   List<VegetableItem> _detectedItems = [];
   bool _showDialog = true;
   String? _batchId;
@@ -53,17 +53,37 @@ class _WeighingPageState extends State<WeighingPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text(result['message'] ?? 'Failed to start weighing session'))
       );
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
   // Listen for real-time weight updates from Firestore
   void _startListeningForWeightUpdates() {
-    _weightSubscription = _batchService.listenForWeightUpdates().listen((snapshot) {
+    if (_batchId == null) {
+      print('DEBUG: batchId is null, cannot listen for weights');
+      return;
+    }
+  
+    print('DEBUG: Starting to listen for weights in batch: $_batchId');
+    
+    _weightSubscription = _batchService.listenForWeightUpdates(_batchId!)
+        .listen((snapshot) {
+      print('DEBUG: Received weight snapshot with ${snapshot.docs.length} documents');
+      
+      // Debug: Print all documents in the snapshot
+      for (int i = 0; i < snapshot.docs.length; i++) {
+        final doc = snapshot.docs[i];
+        final data = doc.data() as Map<String, dynamic>;
+        print('DEBUG: Weight document $i: ${doc.id} - Data: $data');
+      }
+      
       if (snapshot.docs.isNotEmpty) {
         final newItems = <VegetableItem>[];
-        int index = 1;
         
-        for (var doc in snapshot.docs) {
+        for (int i = 0; i < snapshot.docs.length; i++) {
+          final doc = snapshot.docs[i];
           final data = doc.data() as Map<String, dynamic>;
           final timestamp = (data['timestamp'] as Timestamp).toDate();
           final timeString = DateFormat('HH:mm:ss').format(timestamp);
@@ -71,7 +91,7 @@ class _WeighingPageState extends State<WeighingPage> {
           
           newItems.add(
             VegetableItem(
-              id: index++,
+              id: i + 1,
               weight: weight,
               time: timeString,
             )
@@ -82,10 +102,21 @@ class _WeighingPageState extends State<WeighingPage> {
           _detectedItems = newItems;
           _isLoading = false;
         });
+        print('DEBUG: Updated _detectedItems with ${newItems.length} items');
+      } else {
+        print('DEBUG: No weight documents found');
+        setState(() {
+          _isLoading = false;
+        });
       }
     }, onError: (error) {
-      print('Error listening for weight updates: $error');
+      print('DEBUG: Error listening for weight updates: $error');
+      setState(() {
+        _isLoading = false;
+      });
     });
+    
+    print('DEBUG: Weight listener setup complete');
   }
 
   // Complete the current batch and navigate to camera page
@@ -99,15 +130,20 @@ class _WeighingPageState extends State<WeighingPage> {
         );
         return;
       }
+      
+      // Navigate to camera page WITH batch_id
+      Navigator.push(
+        context, 
+        MaterialPageRoute(builder: (context) => CameraPage(batchId: _batchId!))
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No active weighing session'))
+      );
     }
-    
-    // Navigate to camera page
-    Navigator.push(
-      context, 
-      MaterialPageRoute(builder: (context) => const CameraPage())
-    );
   }
-  
+
+  // Dialog to select weighing type 
   void _showWeighingTypeDialog() {
     if (_showDialog) {
       showDialog(
@@ -128,7 +164,10 @@ class _WeighingPageState extends State<WeighingPage> {
                     children: [
                       IconButton(
                         icon: const Icon(Icons.close),
-                        onPressed: () => Navigator.of(context).pop(),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          Navigator.of(context).pop(); // balik ke dashboard
+                        },
                         padding: EdgeInsets.zero,
                         constraints: const BoxConstraints(),
                       ),
@@ -173,6 +212,7 @@ class _WeighingPageState extends State<WeighingPage> {
                           setState(() {
                             _showDialog = false;
                           });
+                          // nanti bakal diganti utk logic rompes
                           _initializeBatchAndListenForWeights();
                         }
                       ),
@@ -238,75 +278,113 @@ class _WeighingPageState extends State<WeighingPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Padding(
-            padding: EdgeInsets.all(16.0),
-            child: Text(
-              'Sedang menimbang...',
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w500,
+          // Tampilkan dialog jika belum memilih tipe penimbangan
+          if (_showDialog)
+            const Expanded(
+              child: Center(
+                child: Text(
+                  'Silakan pilih jenis penimbangan',
+                  style: TextStyle(
+                    fontSize: 16,
+                    color: Colors.grey,
+                  ),
+                ),
+              ),
+            )
+          else ...[
+            const Padding(
+              padding: EdgeInsets.all(16.0),
+              child: Text(
+                'Sedang menimbang...',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
               ),
             ),
-          ),
-          
-          Expanded(
-            child: _isLoading
-                ? const Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        SizedBox(
-                          width: 60,
-                          height: 60,
-                          child: CircularProgressIndicator(
-                            valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E5128)),
-                            strokeWidth: 5,
+            
+            Expanded(
+              child: _isLoading
+                  ? const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          SizedBox(
+                            width: 60,
+                            height: 60,
+                            child: CircularProgressIndicator(
+                              valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF1E5128)),
+                              strokeWidth: 5,
+                            ),
                           ),
-                        ),
-                        SizedBox(height: 16),
-                        Text(
-                          'Menunggu timbangan...',
-                          style: TextStyle(
-                            color: Colors.grey,
-                            fontSize: 16,
+                          SizedBox(height: 16),
+                          Text(
+                            'Memulai sesi penimbangan...',
+                            style: TextStyle(
+                              color: Colors.grey,
+                              fontSize: 16,
+                            ),
                           ),
+                        ],
+                      ),
+                    )
+                  : _detectedItems.isEmpty
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.scale,
+                                size: 64,
+                                color: Colors.grey,
+                              ),
+                              SizedBox(height: 16),
+                              Text(
+                                'Letakkan sayur di atas timbangan',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _detectedItems.length,
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          itemBuilder: (context, index) {
+                            final item = _detectedItems[index];
+                            return VegetableListItem(vegetable: item);
+                          },
                         ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    itemCount: _detectedItems.length + 1, 
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    itemBuilder: (context, index) {
-                      final item = _detectedItems[index];
-                      return VegetableListItem(vegetable: item);
-                    },
-                  ),
-          ),
+            ),
+          ],
         ],
       ),
-      floatingActionButton: Container(
-        margin: const EdgeInsets.only(bottom: 60),
-        child: ElevatedButton.icon(
-          onPressed: _navigateToCameraPage,
-          icon: const Icon(Icons.check),
-          label: const Text('Selesai Menimbang'),
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF1E5128),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-          ),
-        ),
-      ),
+      floatingActionButton: !_showDialog && !_isLoading && _detectedItems.isNotEmpty
+          ? Container(
+              margin: const EdgeInsets.only(bottom: 60),
+              child: ElevatedButton.icon(
+                onPressed: _navigateToCameraPage,
+                icon: const Icon(Icons.check),
+                label: const Text('Selesai Menimbang'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF1E5128),
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                ),
+              ),
+            )
+          : null,
       floatingActionButtonLocation: FloatingActionButtonLocation.centerFloat,
     );
   }
 }
 
-// Model class for vegetable items
+// Model class for vegetable items tetap sama
 class VegetableItem {
   final int id;
   final String weight;
@@ -319,39 +397,39 @@ class VegetableItem {
   });
 }
 
-// Widget for each vegetable item in the list
+// VegetableListItem widget tetap sama
 class VegetableListItem extends StatelessWidget {
   final VegetableItem vegetable;
 
-  const VegetableListItem({
-    super.key,
-    required this.vegetable,
-  });
+  const VegetableListItem({super.key, required this.vegetable});
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      padding: const EdgeInsets.all(12),
+      margin: const EdgeInsets.only(bottom: 12),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: const Color(0xFFF5F5F5),
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withAlpha((0.1 * 255).toInt()),
+            spreadRadius: 1,
+            blurRadius: 4,
+          ),
+        ],
       ),
       child: Row(
         children: [
           Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(8),
-            ),
-            child: const Icon(
-              Icons.eco,
-              color: Color(0xFF1E5128),
-              size: 24,
+            width: 8,
+            height: 8,
+            decoration: const BoxDecoration(
+              shape: BoxShape.circle,
+              color: Color(0xFF326229),
             ),
           ),
-          const SizedBox(width: 16),
+          const SizedBox(width: 12),
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,

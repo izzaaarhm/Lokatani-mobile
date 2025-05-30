@@ -16,11 +16,7 @@ class ApiService {
         // Get current Firebase user
         User? user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          // Use Firebase session cookie instead of getIdToken
-          // This avoids the PigeonUserDetails error
-          await user.reload(); // Refresh user data
-          
-          // Just add the UID as a custom header for now
+          await user.reload(); 
           headers['X-User-ID'] = user.uid;
           headers['X-User-Email'] = user.email ?? '';
         }

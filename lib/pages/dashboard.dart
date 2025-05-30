@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import '../services/auth_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/bottom_nav.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
+
 class DashboardScreen extends StatefulWidget {
   const DashboardScreen({super.key});
 
@@ -14,26 +17,28 @@ class _DashboardScreenState extends State<DashboardScreen> {
   final AuthService _authService = AuthService();
   String _name = '';
   String _userId = '';
+  List<DocumentSnapshot> _recentBatches = [];
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
     _loadUserData();
+    _loadRecentBatches();
   }
 
   Future<void> _loadUserData() async {
     try {
-      
       // Get current Firebase user
       final User? currentUser = FirebaseAuth.instance.currentUser;
-      
+
       if (currentUser != null) {
         // Get user ID from Firebase
         _userId = currentUser.uid;
-        
+
         // Try to get profile data with additional Firestore information
         final userData = await _authService.getProfile(_userId);
-        
+
         setState(() {
           _name = userData['name'] ?? currentUser.displayName ?? 'User';
         });
@@ -48,6 +53,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
         _name = 'User';
       });
       print('Error loading profile: $e');
+    }
+  }
+
+  // Update method _loadRecentBatches
+  void _loadRecentBatches() async {
+    try {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Pastikan user sudah terautentikasi dengan benar
+        await user.reload();
+
+        // Get recent batches from Firestore
+        final snapshot = await FirebaseFirestore.instance
+            .collection('vegetable_batches')
+            .where('user_id', isEqualTo: user.uid)
+            .orderBy('created_at', descending: true)
+            .limit(5)
+            .get();
+
+        setState(() {
+          _recentBatches = snapshot.docs;
+          _isLoading = false;
+        });
+      } else {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    } catch (e) {
+      print('Error loading recent batches: $e');
+      setState(() {
+        _isLoading = false;
+      });
     }
   }
 
@@ -122,7 +160,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 ),
                               ),
                             ),
-                
                           ],
                         ),
                       ),
@@ -133,7 +170,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Weighing history header
                 Padding(
                   padding: const EdgeInsets.only(top: 24, bottom: 16),
@@ -154,13 +191,16 @@ class _DashboardScreenState extends State<DashboardScreen> {
                     ],
                   ),
                 ),
-                
+
                 // Weighing history list
-                _buildWeighingHistoryItem(),
-                _buildWeighingHistoryItem(),
-                _buildWeighingHistoryItem(),
-                _buildWeighingHistoryItem(),
-                
+                _isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : Column(
+                        children: _recentBatches
+                            .map((batch) => _buildWeighingHistoryItem(batch))
+                            .toList(),
+                      ),
+
                 // Add weighing button
                 Container(
                   margin: const EdgeInsets.only(top: 24),
@@ -202,7 +242,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
     );
   }
 
-  Widget _buildWeighingHistoryItem() {
+  Widget _buildWeighingHistoryItem(DocumentSnapshot batch) {
+    final data = batch.data() as Map<String, dynamic>;
+    final vegetableType = data['vegetable_type'] ?? 'Unknown';
+    final imageUrl = data['image_url'];
+    final totalWeight = data['total_weight']?.toString() ?? 'xx';
+    final createdAt = data['created_at'] != null
+        ? DateFormat('dd-MM-yyyy').format((data['created_at'] as Timestamp).toDate())
+        : 'Unknown date';
+
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
       decoration: BoxDecoration(
@@ -223,24 +271,39 @@ class _DashboardScreenState extends State<DashboardScreen> {
           height: 48,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(8),
-            image: const DecorationImage(
-              image: AssetImage('assets/images/image.png'),
-              fit: BoxFit.cover,
-            ),
+            color: imageUrl != null ? null : const Color(0xFFF5F5F5),
+            image: imageUrl != null
+                ? DecorationImage(
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
+                  )
+                : null, // Hapus DecorationImage default
           ),
+          // Tambahkan child untuk icon jika tidak ada imageUrl
+          child: imageUrl == null
+              ? const Icon(
+                  Icons.eco,
+                  color: Color(0xFF1E5128),
+                  size: 24,
+                )
+              : null,
         ),
-        title: const Text(
-          'Jenis Sayur',
-          style: TextStyle(fontWeight: FontWeight.w600),
+        title: Text(
+          vegetableType,
+          style: const TextStyle(fontWeight: FontWeight.w600),
         ),
-        subtitle: const Text(
-          'Day, dd-mm-yy\nBerat: xx kg',
-          style: TextStyle(fontSize: 12),
+        subtitle: Text(
+          '$createdAt\nBerat: $totalWeight kg',
+          style: const TextStyle(fontSize: 12),
         ),
         trailing: const Icon(Icons.chevron_right),
         onTap: () {
-          // Navigate to detail
-          Navigator.pushNamed(context, '/weighing-detail');
+          // Navigate to detail with batch id
+          Navigator.pushNamed(
+            context,
+            '/weighing-detail',
+            arguments: batch.id,
+          );
         },
       ),
     );

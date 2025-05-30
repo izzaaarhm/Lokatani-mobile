@@ -1,10 +1,119 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 
-class WeighingDetailScreen extends StatelessWidget {
+Stream<DocumentSnapshot> listenForVegetableIdentification(String batchId) {
+  return FirebaseFirestore.instance
+      .collection('vegetable_batches')
+      .doc(batchId)
+      .snapshots();
+}
+
+class WeighingDetailScreen extends StatefulWidget {
   const WeighingDetailScreen({super.key});
 
   @override
+  State<WeighingDetailScreen> createState() => _WeighingDetailScreenState();
+}
+
+class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
+  bool _isLoading = true;
+  Map<String, dynamic>? _batchData;
+  List<Map<String, dynamic>> _weightsData = [];
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    // Get batch ID from route arguments
+    final batchId = ModalRoute.of(context)!.settings.arguments as String?;
+    if (batchId != null) {
+      _loadBatchData(batchId);
+    } else {
+      setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _loadBatchData(String batchId) async {
+    try {
+      // Load batch data
+      final batchDoc = await FirebaseFirestore.instance
+          .collection('vegetable_batches')
+          .doc(batchId)
+          .get();
+          
+      if (!batchDoc.exists) {
+        setState(() => _isLoading = false);
+        return;
+      }
+      
+      // Load weights collection
+      final weightsSnapshot = await FirebaseFirestore.instance
+          .collection('vegetable_batches')
+          .doc(batchId)
+          .collection('weights')
+          .orderBy('timestamp')
+          .get();
+          
+      final weights = weightsSnapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'weight': data['weight'],
+          'timestamp': data['timestamp'],
+        };
+      }).toList();
+      
+      setState(() {
+        _batchData = batchDoc.data() as Map<String, dynamic>;
+        _weightsData = weights;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading batch data: $e');
+      setState(() => _isLoading = false);
+    }
+  }
+  
+  @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildAppBar(context),
+              const Expanded(
+                child: Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
+    if (_batchData == null) {
+      return Scaffold(
+        backgroundColor: Colors.white,
+        body: SafeArea(
+          child: Column(
+            children: [
+              _buildAppBar(context),
+              const Expanded(
+                child: Center(
+                  child: Text(
+                    'Batch data not found',
+                    style: TextStyle(fontSize: 16, color: Colors.grey),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
@@ -65,18 +174,35 @@ class WeighingDetailScreen extends StatelessWidget {
     );
   }
 
+  // Update _buildVegetableHeader to use real data
   Widget _buildVegetableHeader() {
+    final imageUrl = _batchData?['image_url'];
+    final vegetableName = _batchData?['vegetable_type'] ?? 'Unknown Vegetable';
+
     return Stack(
       children: [
         // Vegetable image
         Container(
           height: 220,
-          decoration: const BoxDecoration(
-            image: DecorationImage(
-              image: AssetImage('assets/images/image.png'), // Replace with your kale image
-              fit: BoxFit.cover,
-            ),
+          decoration: BoxDecoration(
+            color: const Color(0xFFF5F5F5), // Background color for fallback
+            image: imageUrl != null
+                ? DecorationImage(
+                    image: NetworkImage(imageUrl),
+                    fit: BoxFit.cover,
+                  )
+                : null,
           ),
+          // Show icon if no image available
+          child: imageUrl == null
+              ? const Center(
+                  child: Icon(
+                    Icons.eco,
+                    size: 48,
+                    color: Color(0xFF1E5128),
+                  ),
+                )
+              : null,
         ),
         
         // Vegetable name overlay
@@ -87,9 +213,9 @@ class WeighingDetailScreen extends StatelessWidget {
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             color: Colors.black.withOpacity(0.4),
-            child: const Text(
-              'Kale',
-              style: TextStyle(
+            child: Text(
+              vegetableName,
+              style: const TextStyle(
                 color: Colors.white,
                 fontSize: 20,
                 fontWeight: FontWeight.bold,
@@ -101,16 +227,30 @@ class WeighingDetailScreen extends StatelessWidget {
     );
   }
 
+  // Update _buildWeighingInfo to use real data
   Widget _buildWeighingInfo() {
+    final createdAt = _batchData?['created_at'];
+    final totalWeight = _batchData?['total_weight'] ?? 0;
+    final weighingCount = _weightsData.length;
+
+    // Format date
+    String formattedDate = 'Unknown date';
+    if (createdAt != null) {
+      final date = (createdAt as Timestamp).toDate();
+      final dayName = DateFormat('EEEE', 'id_ID').format(date); // Indonesian day name
+      final dateFormatted = DateFormat('dd-MM-yyyy').format(date);
+      formattedDate = '$dayName, $dateFormatted';
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         // Date
         Row(
           children: [
-            const Text(
-              'Senin, dd-mm-yy',
-              style: TextStyle(
+            Text(
+              formattedDate,
+              style: const TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
               ),
@@ -123,20 +263,20 @@ class WeighingDetailScreen extends StatelessWidget {
         // Weight info
         Row(
           children: [
-            const Column(
+            Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Jumlah penimbangan: 5',
-                  style: TextStyle(
+                  'Jumlah penimbangan: $weighingCount',
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
                 ),
-                SizedBox(height: 4),
+                const SizedBox(height: 4),
                 Text(
-                  'Berat Total: xx Kg',
-                  style: TextStyle(
+                  'Berat Total: ${totalWeight.toStringAsFixed(2)} Kg',
+                  style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
                   ),
@@ -149,16 +289,44 @@ class WeighingDetailScreen extends StatelessWidget {
     );
   }
 
+  // Update _buildWeighingList to use real data
   Widget _buildWeighingList() {
+    if (_weightsData.isEmpty) {
+      return const Center(
+        child: Padding(
+          padding: EdgeInsets.all(32.0),
+          child: Text(
+            'No weighing data available',
+            style: TextStyle(
+              fontSize: 16,
+              color: Colors.grey,
+            ),
+          ),
+        ),
+      );
+    }
+
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        _buildWeighingItem(1, "xx", "09:30", true),
-        _buildWeighingItem(2, "xx", "09:33", true),
-        _buildWeighingItem(3, "xx", "09:37", true),
-        _buildWeighingItem(4, "xx", "09:37", true),
-        _buildWeighingItem(5, "xx", "09:37", false),
-      ],
+      children: _weightsData.asMap().entries.map((entry) {
+        final index = entry.key;
+        final weightData = entry.value;
+        
+        final weight = weightData['weight']?.toString() ?? 'xx';
+        final timestamp = weightData['timestamp'] as Timestamp?;
+        
+        String timeFormatted = 'Unknown time';
+        if (timestamp != null) {
+          timeFormatted = DateFormat('HH:mm:ss').format(timestamp.toDate());
+        }
+        
+        return _buildWeighingItem(
+          index + 1, 
+          weight, 
+          timeFormatted, 
+          true // All completed weights should be marked as completed
+        );
+      }).toList(),
     );
   }
 
@@ -202,7 +370,7 @@ class WeighingDetailScreen extends StatelessWidget {
                   ),
                 ),
                 Text(
-                  'Berat: $weight Kg',
+                  'Berat: $weight Gram',
                   style: const TextStyle(
                     fontSize: 14,
                     color: Colors.grey,
@@ -217,7 +385,7 @@ class WeighingDetailScreen extends StatelessWidget {
             time,
             style: const TextStyle(
               fontSize: 14,
-              color: Color(0xFFBCA371), // Golden brown color as shown in the design
+              color: Color(0xFFBCA371), 
             ),
           ),
         ],

@@ -12,7 +12,7 @@ class BatchService {
   Future<Map<String, dynamic>> initiateBatch() async {
     try {
       // Gunakan Firebase ID Token
-      final String? token = await TokenService.getFirebaseIdTokenWithRefresh();
+      final String? token = await TokenService.getFirebaseIdToken();
       final String? userId = FirebaseAuth.instance.currentUser?.uid;
       
       if (token == null || userId == null) {
@@ -78,12 +78,29 @@ class BatchService {
     }
   }
 
-  // Listen for weight changes from IoT device in Firestore
-  Stream<QuerySnapshot> listenForWeightUpdates() {
+  // Listen for weight changes from IoT device in Firestore while weighing
+  Stream<QuerySnapshot> listenForWeightUpdates(String batchId) {
+    print('DEBUG: Starting listener for batch: $batchId');
+    return _firestore
+      .collection('vegetable_batches')
+      .doc(batchId)
+      .collection('weights')
+      .orderBy('timestamp', descending: false)
+      .snapshots();
+  }
+
+  // Listen for a specific batch by ID
+  Stream<DocumentSnapshot> listenForBatchById(String batchId) {
     return _firestore
         .collection('vegetable_batches')
-        .orderBy('timestamp', descending: true)
-        .limit(50)
+        .doc(batchId)
         .snapshots();
+  }
+
+  Stream<DocumentSnapshot> listenForVegetableIdentification(String batchId) {
+    return _firestore
+        .collection('vegetable_batches')
+        .doc(batchId)
+      .snapshots();
   }
 }

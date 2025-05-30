@@ -8,6 +8,7 @@ import '../pages/profile.dart';
 import '../pages/edit_profile.dart';
 import '../pages/history.dart';
 import '../pages/weighing_detail.dart';
+import '../pages/weighing_result.dart';
 
 class Routes {
   static const String login = '/';

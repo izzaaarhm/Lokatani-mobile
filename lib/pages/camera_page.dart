@@ -3,12 +3,18 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter_image_compress/flutter_image_compress.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
 import 'package:image/image.dart' as img;
-
+import 'package:lokatech_timbangan/pages/weighing_result.dart';
+import 'package:lokatech_timbangan/services/ml_services.dart';
+import 'package:lokatech_timbangan/services/batch_services.dart';
 class CameraPage extends StatefulWidget {
-  const CameraPage({super.key});
+  final String batchId;
+
+  const CameraPage({super.key, required this.batchId});
 
   @override
   State<CameraPage> createState() => _CameraPageState();
@@ -152,7 +158,9 @@ class _CameraPageState extends State<CameraPage> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => PhotoPreviewPage(imagePath: imagePath),
+        builder: (context) => PhotoPreviewPage(
+          imagePath: imagePath,
+          batchId: widget.batchId,),
       ),
     );
   }
@@ -289,10 +297,12 @@ class _CameraPageState extends State<CameraPage> {
   }
 }
 
+//Photo Preview Page
 class PhotoPreviewPage extends StatefulWidget {
   final String imagePath;
+  final String batchId;
 
-  const PhotoPreviewPage({super.key, required this.imagePath});
+  const PhotoPreviewPage({super.key, required this.imagePath, required this.batchId});
 
   @override
   State<PhotoPreviewPage> createState() => _PhotoPreviewPageState();
@@ -300,6 +310,8 @@ class PhotoPreviewPage extends StatefulWidget {
 
 class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
   late String fileSize;
+  final MLService _mlService = MLService();
+  final BatchService _batchService = BatchService();
 
   @override
   void initState() {
@@ -370,8 +382,34 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
                   child: ElevatedButton.icon(
                     icon: const Icon(Icons.check),
                     label: const Text('Kirim Foto'),
-                    onPressed: () {
-                      // ini nanti lanjut proses kirim foot ke backend
+                    onPressed: () async {
+                      final photoSentTime = DateTime.now();
+                      final photoSentTimeStr = DateFormat('HH:mm:ss').format(photoSentTime);
+
+                      // Show loading dialog
+                      showDialog(
+                        context: context,
+                        barrierDismissible: false,
+                        builder: (context) => const Center(
+                          child: CircularProgressIndicator(),
+                        ),
+                      );
+                      
+                      // Send photo to backend
+                      final result = await _mlService.identifyVegetable(widget.imagePath, widget.batchId);
+                      
+                      // Close loading dialog
+                      Navigator.of(context).pop();
+                      
+                      if (result['success']) {
+                        // Set up listener for identification results
+                        _listenForIdentificationResults(photoSentTimeStr);
+                      } else {
+                        // Show error
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text(result['message'] ?? 'Failed to identify vegetable'))
+                        );
+                      }
                     },
                   ),
                 ),
@@ -381,5 +419,38 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
         ),
       ),
     );
+  }
+  void _listenForIdentificationResults(String photoSentTimeStr) {
+    // Listen for updates to the batch document
+    _batchService.listenForVegetableIdentification(widget.batchId)
+        .listen((snapshot) {
+      if (snapshot.exists) {
+        final data = snapshot.data() as Map<String, dynamic>;
+        
+        // Check if vegetable_type field exists and is not null
+        if (data.containsKey('vegetable_type') && data['vegetable_type'] != null) {
+          // Record result received timestamp
+          final resultReceivedTime = DateTime.now();
+          final resultReceivedTimeStr = DateFormat('HH:mm:ss').format(resultReceivedTime);
+          
+          // Navigate to result page
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => WeighingResultPage(
+                imagePath: data['image_url'] ?? widget.imagePath,
+                vegetableName: data['vegetable_type'] ?? 'Unknown',
+                totalWeight: '${data['total_weight'] ?? 0} Kg',
+                weighingDate: data['created_at'] != null
+                    ? DateFormat('dd-MM-yyyy').format((data['created_at'] as Timestamp).toDate())
+                    : 'Unknown',
+                photoSentTime: photoSentTimeStr,
+                resultReceivedTime: resultReceivedTimeStr,
+              ),
+            ),
+          );
+        }
+      }
+    });
   }
 }
