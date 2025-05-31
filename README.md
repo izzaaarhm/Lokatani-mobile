@@ -18,14 +18,14 @@ A Flutter-based mobile application for vegetable weighing and identification. Th
   - Overview of recent weighing activities
   - Detailed history of all weighing sessions
   - Search and filter capabilities for past records
-  
+
 
 ## Getting Started
 
 ### Prerequisites
 
 - Flutter SDK (latest stable version)
-- Android Studio / VS Code
+- VS Code
 - Firebase account
 - Physical device or emulator
 
