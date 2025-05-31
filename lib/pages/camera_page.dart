@@ -440,7 +440,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
               builder: (context) => WeighingResultPage(
                 imagePath: data['image_url'] ?? widget.imagePath,
                 vegetableName: data['vegetable_type'] ?? 'Unknown',
-                totalWeight: '${data['total_weight'] ?? 0} Kg',
+                totalWeight: '${data['total_weight'] ?? 0} Gram',
                 weighingDate: data['created_at'] != null
                     ? DateFormat('dd-MM-yyyy').format((data['created_at'] as Timestamp).toDate())
                     : 'Unknown date',

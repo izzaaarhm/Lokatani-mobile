@@ -275,7 +275,7 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Berat Total: ${totalWeight.toStringAsFixed(2)} Gr',
+                  'Berat Total: ${totalWeight.toStringAsFixed(2)} Gram',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
