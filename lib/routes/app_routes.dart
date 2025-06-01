@@ -9,6 +9,7 @@ import '../pages/edit_profile.dart';
 import '../pages/history.dart';
 import '../pages/weighing_detail.dart';
 import '../pages/weighing_result.dart';
+import '../pages/main_navigation.dart';
 
 class Routes {
   static const String login = '/';
@@ -28,10 +29,11 @@ class Routes {
       login: (context) => const LoginScreen(),
       register: (context) => const RegisterScreen(),
       forgotPassword: (context) => const ChangePasswordScreen(),
-      dashboard: (context) => const DashboardScreen(),
+      // Use MainNavigationScreen for dashboard, profile, and history
+      dashboard: (context) => const MainNavigationScreen(),
+      profile: (context) => const MainNavigationScreen(),
+      history: (context) => const MainNavigationScreen(),
       addWeighing: (context) => const WeighingPage(),
-      profile: (context) => const ProfileScreen(),
-      history: (context) => const HistoryScreen(),
       weighingDetail: (context) => const WeighingDetailScreen(),
       editProfile: (context) => const EditProfileScreen(),
       // tutorial: (context) => const TutorialScreen(),
