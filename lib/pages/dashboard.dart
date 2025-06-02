@@ -54,7 +54,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // Update method _loadRecentBatches
+  // Simplified version - Update method _loadRecentBatches
   void _loadRecentBatches() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -67,11 +67,25 @@ class _DashboardScreenState extends State<DashboardScreen> {
             .collection('vegetable_batches')
             .where('user_id', isEqualTo: user.uid)
             .orderBy('created_at', descending: true)
-            .limit(3)
+            .limit(10) // Get more to account for filtering
             .get();
 
+        // Filter out batches without valid weighing data
+        final validBatches = snapshot.docs.where((batch) {
+          final data = batch.data();
+          final totalWeight = data['total_weight'];
+          final vegetableType = data['vegetable_type'];
+
+          // Only include batches that have valid data
+          return totalWeight != null &&
+              totalWeight > 0 &&
+              vegetableType != null &&
+              vegetableType != 'Unknown' &&
+              vegetableType.toString().trim().isNotEmpty;
+        }).take(3).toList(); // Take only first 3 valid batches
+
         setState(() {
-          _recentBatches = snapshot.docs;
+          _recentBatches = validBatches;
           _isLoading = false;
         });
       } else {
@@ -182,10 +196,15 @@ class _DashboardScreenState extends State<DashboardScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      Icon(
-                        Icons.arrow_forward,
-                        color: Theme.of(context).primaryColor,
-                      ),
+                      IconButton(
+                        onPressed: () {
+                          // Navigate to history page
+                          Navigator.pushNamed(context, '/history');
+                        },
+                        icon: Icon(Icons.arrow_forward,
+                          color: Theme.of(context).primaryColor,
+                        ),
+                      )
                     ],
                   ),
                 ),
@@ -194,10 +213,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
                 _isLoading
                     ? Center(child: CircularProgressIndicator())
                     : Column(
-                        children: _recentBatches
-                            .map((batch) => _buildWeighingHistoryItem(batch))
-                            .toList(),
-                      ),
+                  children: _recentBatches
+                      .map((batch) => _buildWeighingHistoryItem(batch))
+                      .toList(),
+                ),
 
                 // Add weighing button
                 Container(
@@ -256,18 +275,18 @@ class _DashboardScreenState extends State<DashboardScreen> {
             color: imageUrl != null ? null : const Color(0xFFF5F5F5),
             image: imageUrl != null
                 ? DecorationImage(
-                    image: NetworkImage(imageUrl),
-                    fit: BoxFit.cover,
-                  )
+              image: NetworkImage(imageUrl),
+              fit: BoxFit.cover,
+            )
                 : null, // Hapus DecorationImage default
           ),
           // Tambahkan child untuk icon jika tidak ada imageUrl
           child: imageUrl == null
               ? const Icon(
-                  Icons.eco,
-                  color: Color(0xFF1E5128),
-                  size: 24,
-                )
+            Icons.eco,
+            color: Color(0xFF1E5128),
+            size: 24,
+          )
               : null,
         ),
         title: Text(

@@ -287,12 +287,12 @@ class _LoginScreenState extends State<LoginScreen> {
                         // Header
                         const Text(
                           'Masuk ke akun Anda',
-                          textAlign: TextAlign.center,
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF326229),
                           ),
+                          textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
 

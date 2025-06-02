@@ -24,9 +24,9 @@ class Routes {
       register: (context) => const RegisterScreen(),
 
       // Use MainNavigationScreen for dashboard, profile, and history
-      dashboard: (context) => const MainNavigationScreen(),
-      profile: (context) => const MainNavigationScreen(),
-      history: (context) => const MainNavigationScreen(),
+      dashboard: (context) => const MainNavigationScreen(initialIndex: 0),
+      profile: (context) => const MainNavigationScreen(initialIndex: 2),
+      history: (context) => const MainNavigationScreen(initialIndex: 1),
       addWeighing: (context) => const WeighingPage(),
       weighingDetail: (context) => const WeighingDetailScreen(),
       editProfile: (context) => const EditProfileScreen(),

@@ -2,13 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
-Stream<DocumentSnapshot> listenForVegetableIdentification(String batchId) {
-  return FirebaseFirestore.instance
-      .collection('vegetable_batches')
-      .doc(batchId)
-      .snapshots();
-}
-
 class WeighingDetailScreen extends StatefulWidget {
   const WeighingDetailScreen({super.key});
 
@@ -103,7 +96,7 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
               const Expanded(
                 child: Center(
                   child: Text(
-                    'Batch data not found',
+                    'Data penimbangan tidak ditemukan',
                     style: TextStyle(fontSize: 16, color: Colors.grey),
                   ),
                 ),
@@ -163,18 +156,11 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
             onPressed: () => Navigator.pop(context),
           ),
           const Spacer(),
-          IconButton(
-            icon: const Icon(Icons.more_vert, color: Colors.black),
-            onPressed: () {
-              // Show options menu
-            },
-          ),
         ],
       ),
     );
   }
 
-  // Update _buildVegetableHeader to use real data
   Widget _buildVegetableHeader() {
     final imageUrl = _batchData?['image_url'];
     final vegetableName = _batchData?['vegetable_type'] ?? 'Unknown Vegetable';
@@ -185,7 +171,7 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
         Container(
           height: 220,
           decoration: BoxDecoration(
-            color: const Color(0xFFF5F5F5), // Background color for fallback
+            color: const Color(0xFFF5F5F5),
             image: imageUrl != null
                 ? DecorationImage(
                     image: NetworkImage(imageUrl),
@@ -193,7 +179,6 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
                   )
                 : null,
           ),
-          // Show icon if no image available
           child: imageUrl == null
               ? const Center(
                   child: Icon(
@@ -227,19 +212,22 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
     );
   }
 
-  // Update _buildWeighingInfo to use real data
   Widget _buildWeighingInfo() {
     final createdAt = _batchData?['created_at'];
     final totalWeight = _batchData?['total_weight'] ?? 0;
     final weighingCount = _weightsData.length;
 
-    // Format date
+    // Format date safely
     String formattedDate = 'Unknown date';
     if (createdAt != null) {
-      final date = (createdAt as Timestamp).toDate();
-      final dayName = DateFormat('EEEE', 'id_ID').format(date); // Indonesian day name
-      final dateFormatted = DateFormat('dd-MM-yyyy').format(date);
-      formattedDate = '$dayName, $dateFormatted';
+      try {
+        final date = (createdAt as Timestamp).toDate();
+        // Use simple date formatting to avoid locale issues
+        formattedDate = DateFormat('EEEE, dd-MM-yyyy').format(date);
+      } catch (e) {
+        print('Error formatting date: $e');
+        formattedDate = 'Invalid date';
+      }
     }
 
     return Column(
@@ -275,7 +263,7 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Berat Total: ${totalWeight.toStringAsFixed(2)} Gram',
+                  'Berat Total: ${totalWeight.toString()} Gram',
                   style: const TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w500,
@@ -289,14 +277,13 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
     );
   }
 
-  // Update _buildWeighingList to use real data
   Widget _buildWeighingList() {
     if (_weightsData.isEmpty) {
       return const Center(
         child: Padding(
           padding: EdgeInsets.all(32.0),
           child: Text(
-            'No weighing data available',
+            'Tidak ada data penimbangan',
             style: TextStyle(
               fontSize: 16,
               color: Colors.grey,
@@ -317,14 +304,19 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
         
         String timeFormatted = 'Unknown time';
         if (timestamp != null) {
-          timeFormatted = DateFormat('HH:mm:ss').format(timestamp.toDate());
+          try {
+            timeFormatted = DateFormat('HH:mm:ss').format(timestamp.toDate());
+          } catch (e) {
+            print('Error formatting time: $e');
+            timeFormatted = 'Invalid time';
+          }
         }
         
         return _buildWeighingItem(
           index + 1, 
           weight, 
           timeFormatted, 
-          true // All completed weights should be marked as completed
+          true
         );
       }).toList(),
     );

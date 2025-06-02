@@ -411,7 +411,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
                   : 'Unknown date',
               photoSentTime: photoSentTimeStr,
               resultReceivedTime: resultReceivedTimeStr,
-              batchId: widget.batchId, // <-- add this
+              batchId: widget.batchId,
             ),
           ),
           (route) => false,

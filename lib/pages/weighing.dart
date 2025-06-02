@@ -361,7 +361,7 @@ class _WeighingPageState extends State<WeighingPage> {
           ],
         ],
       ),
-      floatingActionButton: !_showDialog && !_isLoading //_detectedItems.isNotEmpty
+      floatingActionButton: !_showDialog && !_isLoading && _detectedItems.isNotEmpty
           ? Container(
               margin: const EdgeInsets.only(bottom: 60),
               child: ElevatedButton.icon(

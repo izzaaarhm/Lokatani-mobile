@@ -105,7 +105,7 @@ class AuthService {
     }
   }
   
-  // Get profile data dari Firebase Auth saja
+  // Get profile data dari Firebase Auth
   Future<Map<String, dynamic>> getProfile(String userId) async {
     try {
       User? currentUser = _auth.currentUser;
@@ -124,7 +124,7 @@ class AuthService {
     }
   }
 
-  // Update profile di Firebase Auth saja
+  // Update profile di Firebase Auth
   Future<Map<String, dynamic>> updateProfile(String userId, Map<String, dynamic> profileData) async {
     try {
       User? currentUser = _auth.currentUser;
