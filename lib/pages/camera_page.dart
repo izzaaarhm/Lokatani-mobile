@@ -393,7 +393,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
         .listen((snapshot) {
       if (snapshot.exists) {
         final data = snapshot.data() as Map<String, dynamic>;
-
+        
         // Always navigate to result page, even if detection failed
         final vegetableType = data['vegetable_type'] ?? 'Unknown';
 

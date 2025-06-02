@@ -276,7 +276,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           style: const TextStyle(fontWeight: FontWeight.w600),
         ),
         subtitle: Text(
-          '$createdAt\nBerat: $totalWeight Gr',
+          '$createdAt\nBerat: $totalWeight Gram',
           style: const TextStyle(fontSize: 12),
         ),
         trailing: const Icon(Icons.chevron_right),
