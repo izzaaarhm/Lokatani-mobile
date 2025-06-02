@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../widgets/bottom_nav.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 
@@ -13,7 +12,6 @@ class DashboardScreen extends StatefulWidget {
 }
 
 class _DashboardScreenState extends State<DashboardScreen> {
-  int _currentIndex = 0;
   final AuthService _authService = AuthService();
   String _name = '';
   String _userId = '';
@@ -222,23 +220,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
           ),
         ),
       ),
-      bottomNavigationBar: CustomNavBar(
-        currentIndex: _currentIndex,
-        onTap: (index) {
-          setState(() {
-            _currentIndex = index;
-          });
-          // Handle navigation based on index
-          // This is a simplified version, you might want to use a more robust navigation approach
-          if (index == 1) {
-            // Navigate to history page
-            Navigator.pushNamed(context, '/history');
-          } else if (index == 2) {
-            // Navigate to profile page
-            Navigator.pushNamed(context, '/profile');
-          }
-        },
-      ),
+      // Remove the bottomNavigationBar
     );
   }
 

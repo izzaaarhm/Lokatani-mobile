@@ -7,7 +7,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
-import 'package:image/image.dart' as img;
 import 'package:lokatech_timbangan/pages/weighing_result.dart';
 import 'package:lokatech_timbangan/services/ml_services.dart';
 import 'package:lokatech_timbangan/services/batch_services.dart';
@@ -48,35 +47,9 @@ class _CameraPageState extends State<CameraPage> {
   }
 
   Future<File> _cropToSquare(String imagePath) async {
-    // Baca file gambar
-    final bytes = await File(imagePath).readAsBytes();
-    final originalImage = img.decodeImage(bytes)!;
-    
-    // Tentukan ukuran square (ambil yang terkecil antara width dan height)
-    final size = originalImage.width < originalImage.height 
-        ? originalImage.width 
-        : originalImage.height;
-    
-    // Hitung offset untuk crop dari center
-    final offsetX = (originalImage.width - size) ~/ 2;
-    final offsetY = (originalImage.height - size) ~/ 2;
-    
-    // Crop gambar menjadi square
-    final croppedImage = img.copyCrop(
-      originalImage,
-      x: offsetX,
-      y: offsetY,
-      width: size,
-      height: size,
-    );
-    
-    final croppedBytes = img.encodeJpg(croppedImage);
-    final dir = await getTemporaryDirectory();
-    final croppedPath = path.join(dir.path, "cropped_${DateTime.now().millisecondsSinceEpoch}.jpg");
-    final croppedFile = File(croppedPath);
-    await croppedFile.writeAsBytes(croppedBytes);
-    
-    return croppedFile;
+    // This function is no longer used, but you can keep it for reference or remove it.
+    // return File(imagePath);
+    throw UnimplementedError('Cropping is disabled');
   }
 
   Future<XFile?> _compressImage(File file) async {
@@ -102,11 +75,8 @@ class _CameraPageState extends State<CameraPage> {
     try {
       final file = await _cameraController!.takePicture();
       
-      // crop menjadi rasio 1:1
-      final croppedFile = await _cropToSquare(file.path);
-      
-      // compress
-      final compressed = await _compressImage(croppedFile);
+      // Do NOT crop, just compress the original image
+      final compressed = await _compressImage(File(file.path));
 
       setState(() {
         _isProcessing = false;
@@ -132,11 +102,8 @@ class _CameraPageState extends State<CameraPage> {
       });
 
       try {
-        // Crop menjadi square terlebih dahulu
-        final croppedFile = await _cropToSquare(pickedFile.path);
-        
-        // Kemudian compress
-        final compressed = await _compressImage(croppedFile);
+        // Do NOT crop, just compress the original image
+        final compressed = await _compressImage(File(pickedFile.path));
         
         setState(() {
           _isProcessing = false;
@@ -407,7 +374,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
                       } else {
                         // Show error
                         ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(content: Text(result['message'] ?? 'Failed to identify vegetable'))
+                          SnackBar(content: Text(result['message'] ?? 'Gagal mengidentifikasi jenis sayur. Silakan ambil foto ulang.')),
                         );
                       }
                     },
@@ -421,36 +388,34 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
     );
   }
   void _listenForIdentificationResults(String photoSentTimeStr) {
-    // Listen for updates to the batch document
     _batchService.listenForVegetableIdentification(widget.batchId)
         .listen((snapshot) {
       if (snapshot.exists) {
         final data = snapshot.data() as Map<String, dynamic>;
         
-        // Check if vegetable_type field exists and is not null
-        if (data.containsKey('vegetable_type') && data['vegetable_type'] != null) {
-          // Record result received timestamp
-          final resultReceivedTime = DateTime.now();
-          final resultReceivedTimeStr = DateFormat('HH:mm:ss').format(resultReceivedTime);
-          
-          // Navigate to result page and prevent going back
-          Navigator.pushAndRemoveUntil(
-            context,
-            MaterialPageRoute(
-              builder: (context) => WeighingResultPage(
-                imagePath: data['image_url'] ?? widget.imagePath,
-                vegetableName: data['vegetable_type'] ?? 'Unknown',
-                totalWeight: '${data['total_weight'] ?? 0} Gram',
-                weighingDate: data['created_at'] != null
-                    ? DateFormat('dd-MM-yyyy').format((data['created_at'] as Timestamp).toDate())
-                    : 'Unknown date',
-                photoSentTime: photoSentTimeStr,
-                resultReceivedTime: resultReceivedTimeStr,
-              ),
+        // Always navigate to result page, even if detection failed
+        final vegetableType = data['vegetable_type'] ?? 'Unknown';
+
+        final resultReceivedTime = DateTime.now();
+        final resultReceivedTimeStr = DateFormat('HH:mm:ss').format(resultReceivedTime);
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(
+            builder: (context) => WeighingResultPage(
+              imagePath: data['image_url'] ?? widget.imagePath,
+              vegetableName: vegetableType,
+              totalWeight: '${data['total_weight'] ?? 0} Kg',
+              weighingDate: data['created_at'] != null
+                  ? DateFormat('dd-MM-yyyy').format((data['created_at'] as Timestamp).toDate())
+                  : 'Unknown date',
+              photoSentTime: photoSentTimeStr,
+              resultReceivedTime: resultReceivedTimeStr,
+              batchId: widget.batchId, // <-- add this
             ),
-            (route) => false, // This prevents any routes from being accessible
-          );
-        }
+          ),
+          (route) => false,
+        );
       }
     });
   }

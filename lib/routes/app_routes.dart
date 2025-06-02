@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 import '../pages/login.dart';
 import '../pages/register.dart';
-import '../pages/dashboard.dart';
 import '../pages/weighing.dart';
-import '../pages/profile.dart';
 import '../pages/edit_profile.dart';
-import '../pages/history.dart';
 import '../pages/weighing_detail.dart';
+import '../pages/main_navigation.dart';
+
 class Routes {
   static const String login = '/';
   static const String register = '/register';
@@ -23,10 +22,12 @@ class Routes {
     return {
       login: (context) => const LoginScreen(),
       register: (context) => const RegisterScreen(),
-      dashboard: (context) => const DashboardScreen(),
+
+      // Use MainNavigationScreen for dashboard, profile, and history
+      dashboard: (context) => const MainNavigationScreen(),
+      profile: (context) => const MainNavigationScreen(),
+      history: (context) => const MainNavigationScreen(),
       addWeighing: (context) => const WeighingPage(),
-      profile: (context) => const ProfileScreen(),
-      history: (context) => const HistoryScreen(),
       weighingDetail: (context) => const WeighingDetailScreen(),
       editProfile: (context) => const EditProfileScreen(),
       // tutorial: (context) => const TutorialScreen(),

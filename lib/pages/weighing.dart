@@ -61,7 +61,7 @@ class _WeighingPageState extends State<WeighingPage> {
 
   // Listen for real-time weight updates from Firestore
   void _startListeningForWeightUpdates() {
-    if (_batchId == null) {
+    if (_batchId == null ) {
       print('DEBUG: batchId is null, cannot listen for weights');
       return;
     }
@@ -361,7 +361,7 @@ class _WeighingPageState extends State<WeighingPage> {
           ],
         ],
       ),
-      floatingActionButton: !_showDialog && !_isLoading && _detectedItems.isNotEmpty
+      floatingActionButton: !_showDialog && !_isLoading //_detectedItems.isNotEmpty
           ? Container(
               margin: const EdgeInsets.only(bottom: 60),
               child: ElevatedButton.icon(
