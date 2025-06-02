@@ -9,7 +9,7 @@ class WeighingResultPage extends StatelessWidget {
   final String weighingDate;
   final String photoSentTime;
   final String resultReceivedTime;
-  final String batchId; // <-- add this
+  final String batchId;
 
   const WeighingResultPage({
     super.key,
