@@ -6,10 +6,9 @@ class AuthService {
   // Get current user
   User? get currentUser => _auth.currentUser;
   
-  // Register user dengan Firebase saja
+  // Register user dengan Firebase
   Future<Map<String, dynamic>> register(String email, String password, String name) async {
     try {
-      // Create user in Firebase Auth
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -45,7 +44,7 @@ class AuthService {
           message = 'Password terlalu lemah.';
           break;
         case 'invalid-email':
-          message = 'Format email tidak valid.';
+          message = 'Format email tidak valid. Anda hanya dapat menggunakan email dengan domain @lokatani.id';
           break;
         default:
           message = 'Registrasi gagal: ${e.message}';
@@ -56,17 +55,16 @@ class AuthService {
     }
   }
 
-  // Login dengan Firebase saja
+  // Login dengan Firebase
   Future<Map<String, dynamic>> login(String email, String password) async {
     try {
-      // Sign in with Firebase Auth
       UserCredential userCredential = await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
       
       if (userCredential.user == null) {
-        return {'success': false, 'message': 'Login failed'};
+        return {'success': false, 'message': 'Login gagal'};
       }
       
       // Check if email is verified
@@ -74,7 +72,7 @@ class AuthService {
         return {
           'success': false, 
           'emailVerified': false,
-          'message': 'Silahkan verifikasi email Anda sebelum Login. Cek kotak masuk email Anda untuk link verifikasi.'
+          'message': 'Silahkan verifikasi email Anda sebelum Login. Cek kotak masuk email Anda untuk mengakses link verifikasi.'
         };
       }
       
@@ -136,39 +134,7 @@ class AuthService {
       
       return {'success': true};
     } catch (e) {
-      return {'success': false, 'message': 'Failed to update profile: $e'};
-    }
-  }
-
-  // Change password
-  Future<Map<String, dynamic>> changePassword(String currentPassword, String newPassword) async {
-    try {
-      User? user = _auth.currentUser;
-      if (user != null && user.email != null) {
-        AuthCredential credential = EmailAuthProvider.credential(
-          email: user.email!, 
-          password: currentPassword
-        );
-        
-        await user.reauthenticateWithCredential(credential);
-        await user.updatePassword(newPassword);
-        
-        return {'success': true};
-      } else {
-        return {'success': false, 'message': 'User not authenticated'};
-      }
-    } on FirebaseAuthException catch (e) {
-      String message;
-      switch (e.code) {
-        case 'wrong-password':
-          message = 'Password lama salah.';
-          break;
-        default:
-          message = 'Gagal mengubah password: ${e.message}';
-      }
-      return {'success': false, 'message': message};
-    } catch (e) {
-      return {'success': false, 'message': 'Gagal mengubah password: $e'};
+      return {'success': false, 'message': 'Gagal mengubah profil: $e'};
     }
   }
   
@@ -177,7 +143,7 @@ class AuthService {
     try {
       await _auth.signOut();
     } catch (e) {
-      print('Logout error: $e');
+      print('Logout gagal: $e');
     }
   }
 }

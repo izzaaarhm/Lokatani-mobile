@@ -61,6 +61,110 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showDeleteAccountDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Close button
+                Align(
+                  alignment: Alignment.topRight,
+                  child: IconButton(
+                    icon: const Icon(Icons.close),
+                    onPressed: () => Navigator.of(context).pop(),
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ),
+                
+                const SizedBox(height: 10),
+                
+                // Message
+                const Text(
+                  'Hapus Akun',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 14,
+                    color: Colors.grey,
+                  ),
+                ),
+                
+                const SizedBox(height: 20),
+                
+                // Buttons
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => Navigator.of(context).pop(),
+                        style: OutlinedButton.styleFrom(
+                          side: const BorderSide(color: Colors.grey),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text('Batal'),
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          try {
+                            // Delete the user account
+                            await FirebaseAuth.instance.currentUser?.delete();
+                            Navigator.of(context).pop();
+                            // Navigate to login screen
+                            Navigator.pushReplacementNamed(context, '/');
+                          } catch (e) {
+                            // The user may need to reauthenticate before deletion
+                            Navigator.of(context).pop();
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Error: $e')),
+                            );
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                        child: const Text(
+                          'Hapus Akun',
+                          style: TextStyle(color: Colors.white),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -135,9 +239,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   _buildSettingsItem(
                     context,
-                    Icons.lock_outline,
-                    'Ubah Password',
-                    () => Navigator.pushNamed(context, '/forgot-password'),
+                    Icons.delete_outline,
+                    'Hapus Akun',
+                    () => _showDeleteAccountDialog(context),
+                    textColor: Colors.red,
+                    iconColor: Colors.red,
                   ),
                   _buildSettingsItem(
                     context,
