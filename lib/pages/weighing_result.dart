@@ -19,7 +19,7 @@ class WeighingResultPage extends StatelessWidget {
     required this.weighingDate,
     required this.photoSentTime,
     required this.resultReceivedTime,
-    required this.batchId, // <-- add this
+    required this.batchId,
   });
 
   @override
