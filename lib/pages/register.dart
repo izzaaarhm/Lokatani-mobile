@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_services.dart';
+import '../config/app_theme.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -30,7 +31,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
   Future<void> _register() async {
     if (_passwordController.text != _confirmPasswordController.text) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Password salah'))
+        const SnackBar(content: Text('Password dan konfirmasi password tidak sama'))
       );
       return;
     }
@@ -53,15 +54,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
           context: context,
           barrierDismissible: false,
           builder: (context) => AlertDialog(
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
             title: Text('Verifikasi Email'),
-            content: Text('Link verifikasi telah dikirim ke ${_emailController.text.trim()}. Silakan periksa email Anda sebelum Login.'),
+            content: Text('Link verifikasi telah dikirim ke ${_emailController.text.trim()}. Silakan periksa kotak masuk email Anda sebelum Login.'),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
-                  Navigator.pushReplacementNamed(context, '/login');
+                  Navigator.pushReplacementNamed(context, '/');
                 },
-                child: Text('OK'),
+                child: Text('OK',
+                  style: TextStyle(
+                    color: AppTheme.primaryColor,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
               ),
             ],
           ),
@@ -107,7 +117,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 style: TextStyle(
                   fontSize: 24,
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF3F7C35),
+                  color: AppTheme.primaryColor
                 ),
               ),
               const SizedBox(height: 8),
@@ -136,7 +146,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
-              const SizedBox(height: 16),
+              const SizedBox(height: 8),
 
               // Email field
               const Text(
@@ -155,6 +165,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   border: OutlineInputBorder(),
                 ),
               ),
+              const SizedBox(height: 8),
+
+              // Email domain restriction message
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.blue.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.blue.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Pendaftaran akun hanya tersedia untuk karyawan Lokatani dengan email domain @lokatani.id. Dalam fase development, akun dengan domain @mhsw.pnj.ac.id dapat diterima.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.blue.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
               const SizedBox(height: 16),
 
               // Password field
@@ -170,7 +207,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: _passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
-                  hintText: 'Create a password',
+                  hintText: 'Buat password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -185,11 +222,12 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
               ),
+              
               const SizedBox(height: 16),
 
               // Confirm Password field
               const Text(
-                'Confirm password',
+                'Konfirmasi password',
                 style: TextStyle(
                   fontSize: 14,
                   fontWeight: FontWeight.w500,
@@ -200,7 +238,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 controller: _confirmPasswordController,
                 obscureText: _obscureConfirmPassword,
                 decoration: InputDecoration(
-                  hintText: 'Confirm password',
+                  hintText: 'Konfirmasi password',
                   border: const OutlineInputBorder(),
                   suffixIcon: IconButton(
                     icon: Icon(
@@ -215,13 +253,20 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 32),
+              const SizedBox(height: 60),
 
               // Register button
               SizedBox(
                 width: double.infinity,
                 child: ElevatedButton(
                   onPressed: _isLoading ? null : _register,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppTheme.primaryColor,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                  ),
                   child: _isLoading 
                     ? const SizedBox(
                         height: 20,
@@ -231,7 +276,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                           valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                         ),
                       ) 
-                    : const Text('Buat Akun'),
+                    : const Text(
+                        'Daftar',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
                 ),
               ),
             ],

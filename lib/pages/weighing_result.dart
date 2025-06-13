@@ -1,7 +1,7 @@
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:lokatech_timbangan/pages/camera_page.dart';
-
+import 'package:lokatech_timbangan/config/app_theme.dart';
 class _WeighingResultConstants {
     static const double padding = 40.0;
     static const double borderRadius = 12.0;
@@ -64,9 +64,9 @@ class WeighingResultPage extends StatelessWidget {
                   const Text(
                     'Sayur berhasil terdeteksi!',
                     style: TextStyle(
-                      fontSize: 24,
+                      fontSize: 28,
                       fontWeight: FontWeight.w600,
-                      color: Color(0xFF0A3E06),
+                      color: AppTheme.primaryColor,
                     ),
                     textAlign: TextAlign.center,
                   ),
@@ -78,12 +78,12 @@ class WeighingResultPage extends StatelessWidget {
                     width: 250,
                     height: 250,
                     decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(25),
+                      borderRadius: BorderRadius.circular(20),
                       boxShadow: [
                         BoxShadow(
-                          color: Colors.black.withOpacity(0.1),
+                          color: Colors.black.withOpacity(0.5),
                           blurRadius: 10,
-                          offset: const Offset(0, 4),
+                          offset: const Offset(0, 6),
                         ),
                       ],
                     ),
@@ -119,6 +119,7 @@ class WeighingResultPage extends StatelessWidget {
                                 );
                               },
                             )
+
                           : Image.file(
                               File(imagePath),
                               fit: BoxFit.cover,
@@ -142,21 +143,21 @@ class WeighingResultPage extends StatelessWidget {
                   Text(
                     capitalizedVegetableName,
                     style: const TextStyle(
-                      fontSize: 20,
+                      fontSize: 25,
                       fontWeight: FontWeight.w600,
                       color: Color(0xFF1B5E20),
                     ),
                   ),
                   
                   const SizedBox(height: 16),
-                  
+ ///////////////////////////////////////////////////////////////////////////                 
                   // Weighing information - Updated to match design
                   Container(
                     width: double.infinity,
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFFF8F9FA),
-                      borderRadius: BorderRadius.circular(8),
+                      color: AppTheme.backgroundColor,
+                      borderRadius: BorderRadius.circular(12),
                       border: Border.all(
                         color: const Color(0xFFE0E0E0),
                         width: 1,
@@ -176,7 +177,7 @@ class WeighingResultPage extends StatelessWidget {
                     ),
                   ),
                   
-                  const SizedBox(height: 24),
+                  const SizedBox(height: 18),
                 ],
               ),
             ),
@@ -197,18 +198,18 @@ class WeighingResultPage extends StatelessWidget {
                     );
                   },
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF0A3E06),
+                    backgroundColor: AppTheme.primaryColor,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                    elevation: 0,
+                    padding: const EdgeInsets.symmetric(vertical: 16),
+                    elevation: 1,
                   ),
                   child: const Text(
                     'Kembali ke beranda',
                     style: TextStyle(
                       color: Colors.white,
-                      fontSize: 14,
+                      fontSize: 16,
                       fontWeight: FontWeight.w600,
                     ),
                   ),

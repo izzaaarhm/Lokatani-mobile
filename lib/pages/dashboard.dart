@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_services.dart';
+import '../config/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
@@ -54,7 +55,6 @@ class _DashboardScreenState extends State<DashboardScreen> {
     }
   }
 
-  // Simplified version - Update method _loadRecentBatches
   void _loadRecentBatches() async {
     try {
       final user = FirebaseAuth.instance.currentUser;
@@ -107,13 +107,13 @@ class _DashboardScreenState extends State<DashboardScreen> {
       body: SafeArea(
         child: SingleChildScrollView(
           child: Padding(
-            padding: const EdgeInsets.all(16.0),
+            padding: const EdgeInsets.all(20.0),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Header with greeting
                 Container(
-                  padding: const EdgeInsets.all(16),
+                  padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.white,
                     borderRadius: BorderRadius.circular(12),
@@ -136,23 +136,23 @@ class _DashboardScreenState extends State<DashboardScreen> {
                             const Text(
                               'Halo!',
                               style: TextStyle(
-                                fontSize: 18,
+                                fontSize: 20,
                                 fontWeight: FontWeight.bold,
-                                color: Color(0xFF0A3E06),
+                                color: AppTheme.primaryColor,
                               ),
                             ),
-                            const SizedBox(height: 4),
+                            const SizedBox(height: 2),
                             Text(
                               'Selamat Datang, $_name',
                               style: TextStyle(
-                                fontSize: 14,
+                                fontSize: 16,
                                 color: Color(0xFF494A50),
                               ),
                             ),
                             // Tutorial button
-                            const SizedBox(height: 12),
+                            const SizedBox(height: 14),
                             SizedBox(
-                              height: 36,
+                              height: 38,
                               child: ElevatedButton.icon(
                                 onPressed: () {
                                   // Navigate to tutorial
@@ -161,9 +161,9 @@ class _DashboardScreenState extends State<DashboardScreen> {
                                 icon: const Icon(Icons.arrow_forward, size: 16),
                                 label: const Text('Tutorial Menimbang'),
                                 style: ElevatedButton.styleFrom(
-                                  backgroundColor: const Color(0xFF3F7C35),
+                                  backgroundColor: AppTheme.primaryColor,
                                   foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                                  padding: const EdgeInsets.symmetric(horizontal: 14),
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(8),
                                   ),
@@ -177,7 +177,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       ),
                       Image.asset(
                         'assets/images/logo2.png',
-                        width: 90,
+                        width: 95,
                       ),
                     ],
                   ),
@@ -192,7 +192,7 @@ class _DashboardScreenState extends State<DashboardScreen> {
                       const Text(
                         'Riwayat Penimbangan',
                         style: TextStyle(
-                          fontSize: 16,
+                          fontSize: 17,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -245,12 +245,27 @@ class _DashboardScreenState extends State<DashboardScreen> {
 
   Widget _buildWeighingHistoryItem(DocumentSnapshot batch) {
     final data = batch.data() as Map<String, dynamic>;
-    final vegetableType = data['vegetable_type'] ?? 'Unknown';
-    final imageUrl = data['image_url'];
     final totalWeight = data['total_weight']?.toString() ?? 'xx';
     final createdAt = data['created_at'] != null
         ? DateFormat('dd-MM-yyyy').format((data['created_at'] as Timestamp).toDate())
         : 'Unknown date';
+
+    // Determine batch type and display info
+    String itemType;
+    String displayName;
+    IconData iconData;
+    String? imageUrl;
+    
+    if (batch.reference.parent.id == 'vegetable_batches') {
+      itemType = 'Produk';
+      displayName = data['vegetable_type'] ?? 'Sayur Teridentifikasi';
+      iconData = Icons.eco;
+      imageUrl = data['image_url'];
+    } else {
+      itemType = 'Rompes';
+      displayName = 'Sayur Rompes';
+      iconData = Icons.eco;
+    }
 
     return Container(
       margin: const EdgeInsets.only(bottom: 12),
@@ -271,35 +286,80 @@ class _DashboardScreenState extends State<DashboardScreen> {
           width: 48,
           height: 48,
           decoration: BoxDecoration(
+            color: const Color.fromARGB(255, 245, 240, 229),
             borderRadius: BorderRadius.circular(8),
-            color: imageUrl != null ? null : const Color(0xFFF5F5F5),
-            image: imageUrl != null
-                ? DecorationImage(
-              image: NetworkImage(imageUrl),
-              fit: BoxFit.cover,
-            )
-                : null, // Hapus DecorationImage default
           ),
-          // Tambahkan child untuk icon jika tidak ada imageUrl
-          child: imageUrl == null
-              ? const Icon(
-            Icons.eco,
-            color: Color(0xFF1E5128),
-            size: 24,
-          )
-              : null,
+          child: imageUrl != null && imageUrl.isNotEmpty
+              ? ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: Image.network(
+                    imageUrl,
+                    width: 48,
+                    height: 48,
+                    fit: BoxFit.cover,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return Center(
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            value: loadingProgress.expectedTotalBytes != null
+                                ? loadingProgress.cumulativeBytesLoaded /
+                                    loadingProgress.expectedTotalBytes!
+                                : null,
+                          ),
+                        ),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return Icon(
+                        iconData,
+                        color: const Color(0xFF1E5128),
+                        size: 32,
+                      );
+                    },
+                  ),
+                )
+              : Icon(
+                  iconData,
+                  color: const Color(0xFF1E5128),
+                  size: 32,
+                ),
         ),
         title: Text(
-          vegetableType,
-          style: const TextStyle(fontWeight: FontWeight.w600),
+          displayName,
+          style: const TextStyle(
+            fontWeight: FontWeight.w500,
+            fontSize: 16,
+          ),
         ),
-        subtitle: Text(
-          '$createdAt\nBerat: $totalWeight Gram',
-          style: const TextStyle(fontSize: 12),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '$itemType - $totalWeight Gram',
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+            Text(
+              createdAt,
+              style: const TextStyle(
+                color: Colors.grey,
+                fontSize: 14,
+              ),
+            ),
+          ],
         ),
-        trailing: const Icon(Icons.chevron_right),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: Colors.grey,
+        ),
         onTap: () {
-          // Navigate to detail with batch id
           Navigator.pushNamed(
             context,
             '/weighing-detail',

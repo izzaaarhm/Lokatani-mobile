@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../config/app_theme.dart';
 
 class WeighingDetailScreen extends StatefulWidget {
   const WeighingDetailScreen({super.key});
@@ -131,7 +132,7 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           _buildWeighingInfo(),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 32),
                           _buildWeighingList(),
                         ],
                       ),
@@ -163,13 +164,12 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
 
   Widget _buildVegetableHeader() {
     final imageUrl = _batchData?['image_url'];
-    final vegetableName = _batchData?['vegetable_type'] ?? 'Unknown Vegetable';
-
     return Stack(
       children: [
         // Vegetable image
         Container(
-          height: 220,
+          height: 250,
+          margin: const EdgeInsets.symmetric(vertical: 8),
           decoration: BoxDecoration(
             color: const Color(0xFFF5F5F5),
             image: imageUrl != null
@@ -189,30 +189,20 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
                 )
               : null,
         ),
+      
+        const SizedBox(height: 28),
+        // Vegetable name
         
-        // Vegetable name overlay
-        Positioned(
-          left: 0,
-          right: 0,
-          bottom: 0,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            color: Colors.black.withOpacity(0.4),
-            child: Text(
-              vegetableName,
-              style: const TextStyle(
-                color: Colors.white,
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-          ),
-        ),
       ],
     );
   }
 
   Widget _buildWeighingInfo() {
+    final vegetableName = _batchData?['vegetable_type'] ?? 'Unknown Vegetable';
+    final String capitalizedVegetableName = 
+        vegetableName.isNotEmpty ? 
+        vegetableName[0].toUpperCase() + vegetableName.substring(1).toLowerCase() : 
+        '';
     final createdAt = _batchData?['created_at'];
     final totalWeight = _batchData?['total_weight'] ?? 0;
     final weighingCount = _weightsData.length;
@@ -235,18 +225,28 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
       children: [
         // Date
         Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [
             Text(
+              capitalizedVegetableName,
+              style: const TextStyle(
+                fontSize: 24,
+                fontWeight: FontWeight.bold,
+                color: AppTheme.primaryColor
+              ),
+            ),
+
+            Text(
               formattedDate,
+              textAlign: TextAlign.right,
               style: const TextStyle(
                 fontSize: 14,
                 color: Colors.grey,
               ),
             ),
-            const Spacer(),
           ],
         ),
-        const SizedBox(height: 12),
+        const SizedBox(height: 16),
         
         // Weight info
         Row(
@@ -257,16 +257,16 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
                 Text(
                   'Jumlah penimbangan: $weighingCount',
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
                 const SizedBox(height: 4),
                 Text(
                   'Berat Total: ${totalWeight.toString()} Gram',
                   style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w400,
                   ),
                 ),
               ],
@@ -323,65 +323,75 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
   }
 
   Widget _buildWeighingItem(int number, String weight, String time, bool isCompleted) {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 12),
-      child: Row(
-        children: [
-          // Check icon
-          Container(
-            width: 24,
-            height: 24,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: isCompleted ? const Color(0xFF326229) : Colors.transparent,
-              border: Border.all(
-                color: isCompleted ? const Color(0xFF326229) : Colors.grey,
-                width: 2,
+    return Column(
+      children: [
+        Container(
+          margin: const EdgeInsets.only(left: 16, right: 16),
+          child: Row(
+            children: [
+              // Check icon
+              Container(
+                width: 42,
+                height: 42,
+                decoration: BoxDecoration(
+                  color: const Color.fromARGB(255, 245, 240, 229),
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: isCompleted
+                    ? const Icon(
+                        Icons.eco,
+                        size: 28,
+                        color: Color(0xFF1E5128),
+                      )
+                    : null,
               ),
-            ),
-            child: isCompleted
-                ? const Icon(
-                    Icons.check,
-                    size: 16,
-                    color: Colors.white,
-                  )
-                : null,
-          ),
-          const SizedBox(width: 12),
-          
-          // Weighing info
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  'Penimbangan $number',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
+              const SizedBox(width: 15),
+              
+              // Weighing info
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Penimbangan $number',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Berat: $weight Gram',
+                      style: const TextStyle(
+                        fontSize: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
                 ),
-                Text(
-                  'Berat: $weight Gram',
-                  style: const TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
+              ),
+              
+              // Time
+              Text(
+                time,
+                style: const TextStyle(
+                  fontSize: 16,
+                  color: Color(0xFFBCA371), 
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-          
-          // Time
-          Text(
-            time,
-            style: const TextStyle(
-              fontSize: 14,
-              color: Color(0xFFBCA371), 
-            ),
+        ),
+        // Add spacing and optional divider
+        const SizedBox(height: 20),
+        if (number < _weightsData.length) // Don't show divider after last item
+          Container(
+            margin: const EdgeInsets.symmetric(horizontal: 32),
+            height: 1,
+            color: Colors.grey.shade200,
           ),
-        ],
-      ),
+        const SizedBox(height: 20),
+      ],
     );
   }
 }

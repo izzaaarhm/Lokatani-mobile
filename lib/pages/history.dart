@@ -99,7 +99,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
         title: const Text(
           'Riwayat Penimbangan',
           style: TextStyle(
-            fontSize: 18,
+            fontSize: 24,
             fontWeight: FontWeight.w600,
           ),
         ),

@@ -5,10 +5,57 @@ class AuthService {
 
   // Get current user
   User? get currentUser => _auth.currentUser;
+
+  // Validate email domain
+  bool _isValidEmailDomain(String email) {
+    final allowedDomains = ['@lokatani.id', '@mhsw.pnj.ac.id'];
+    return allowedDomains.any((domain) => email.toLowerCase().endsWith(domain));
+  }
+  
+  // Validate password strength
+  Map<String, dynamic> _validatePassword(String password) {
+    if (password.length < 8) {
+      return {
+        'isValid': false,
+        'message': 'Password harus minimal 8 karakter'
+      };
+    }
+    
+    bool hasUppercase = password.contains(RegExp(r'[A-Z]'));
+    bool hasLowercase = password.contains(RegExp(r'[a-z]'));
+    bool hasDigits = password.contains(RegExp(r'[0-9]'));
+    bool hasSpecialCharacters = password.contains(RegExp(r'[!@#$%^&*(),.?":{}|<>]'));
+    
+    if (!hasUppercase || !hasLowercase || !hasDigits || !hasSpecialCharacters) {
+      return {
+        'isValid': false,
+        'message': 'Password harus mengandung kombinasi huruf besar, huruf kecil, angka, dan simbol (!@#\$%^&*)'
+      };
+    }
+    
+    return {'isValid': true};
+  }
   
   // Register user dengan Firebase
   Future<Map<String, dynamic>> register(String email, String password, String name) async {
     try {
+      // Validate email domain
+      if (!_isValidEmailDomain(email)) {
+        return {
+          'success': false, 
+          'message': 'Pendaftaran akun hanya dapat menggunakan email domain @lokatani.id (email dengan domain @mhsw.pnj.ac.id diperbolehkan untuk developer selama masa pengembangan).'
+        };
+      }
+      
+      // Validate password strength
+      final passwordValidation = _validatePassword(password);
+      if (!passwordValidation['isValid']) {
+        return {
+          'success': false,
+          'message': passwordValidation['message']
+        };
+      }
+      
       UserCredential userCredential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -16,7 +63,7 @@ class AuthService {
       
       // Make sure the user exists before proceeding
       if (userCredential.user == null) {
-        return {'success': false, 'message': 'User creation failed'};
+        return {'success': false, 'message': 'Gagal membuat akun.'};
       }
       
       // Send email verification
@@ -44,14 +91,14 @@ class AuthService {
           message = 'Password terlalu lemah.';
           break;
         case 'invalid-email':
-          message = 'Format email tidak valid. Anda hanya dapat menggunakan email dengan domain @lokatani.id';
+          message = 'Format email tidak valid. Anda hanya dapat menggunakan email dengan domain @lokatani.id atau @mhsw.pnj.ac.id.';
           break;
         default:
-          message = 'Registrasi gagal: ${e.message}';
+          message = 'Registrasi akun gagal: ${e.message}';
       }
       return {'success': false, 'message': message};
     } catch (e) {
-      return {'success': false, 'message': 'Registrasi gagal: $e'};
+      return {'success': false, 'message': 'Registrasi akun gagal: $e'};
     }
   }
 

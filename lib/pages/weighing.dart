@@ -4,6 +4,7 @@ import 'camera_page.dart';
 import '../services/batch_services.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
+import '../config/app_theme.dart';
 
 class WeighingPage extends StatefulWidget {
   const WeighingPage({super.key});
@@ -13,17 +14,17 @@ class WeighingPage extends StatefulWidget {
 }
 
 class _WeighingPageState extends State<WeighingPage> {
-  bool _isLoading = false; // Ubah dari true ke false
+  bool _isLoading = false; 
   List<VegetableItem> _detectedItems = [];
   bool _showDialog = true;
   String? _batchId;
+  String? _sessionType;
   StreamSubscription? _weightSubscription;
   final BatchService _batchService = BatchService();
   
   @override
   void initState() {
     super.initState();
-    // Show the dialog after the page is built
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _showWeighingTypeDialog();
     });
@@ -36,22 +37,23 @@ class _WeighingPageState extends State<WeighingPage> {
   }
 
   // Initialize a new batch and start listening for weight updates
-  Future<void> _initializeBatchAndListenForWeights() async {
+  Future<void> _initializeBatchAndListenForWeights(String sessionType) async {
     setState(() {
       _isLoading = true;
     });
 
-    final result = await _batchService.initiateBatch();
+    final result = await _batchService.initiateBatch(sessionType: sessionType);
     
     if (result['success']) {
-      _batchId = result['data']['batch_id'];
+      _batchId = result['data']['session_id'];
+      _sessionType = sessionType;
       
       // Start listening for weight updates
       _startListeningForWeightUpdates();
     } else {
       // Show error
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(result['message'] ?? 'Failed to start weighing session'))
+        SnackBar(content: Text(result['message'] ?? 'Gagal memulai sesi penimbangan'))
       );
       setState(() {
         _isLoading = false;
@@ -61,50 +63,61 @@ class _WeighingPageState extends State<WeighingPage> {
 
   // Listen for real-time weight updates from Firestore
   void _startListeningForWeightUpdates() {
-    if (_batchId == null ) {
-      print('DEBUG: batchId is null, cannot listen for weights');
+    if (_batchId == null || _sessionType == null) {
+      print('DEBUG: sessionid is null, cannot listen for weights');
       return;
     }
   
-    print('DEBUG: Starting to listen for weights in batch: $_batchId');
+    print('DEBUG: Starting to listen for weights in batch: $_batchId, type: $_sessionType');
     
-    _weightSubscription = _batchService.listenForWeightUpdates(_batchId!)
+    _weightSubscription = _batchService.listenForWeightUpdates(_batchId!, _sessionType!)
         .listen((snapshot) {
       print('DEBUG: Received weight snapshot with ${snapshot.docs.length} documents');
-      
-      // Debug: Print all documents in the snapshot
-      for (int i = 0; i < snapshot.docs.length; i++) {
-        final doc = snapshot.docs[i];
-        final data = doc.data() as Map<String, dynamic>;
-        print('DEBUG: Weight document $i: ${doc.id} - Data: $data');
-      }
       
       if (snapshot.docs.isNotEmpty) {
         final newItems = <VegetableItem>[];
         
-        for (int i = 0; i < snapshot.docs.length; i++) {
-          final doc = snapshot.docs[i];
+        if (_sessionType == 'product') {
+          for (int i = snapshot.docs.length - 1; i >= 0; i--) {
+            final doc = snapshot.docs[i];
+            final data = doc.data() as Map<String, dynamic>;
+            final timestamp = (data['timestamp'] as Timestamp).toDate();
+            final timeString = DateFormat('HH:mm:ss').format(timestamp);
+            final weight = (data['weight'] ?? 'xx').toString();
+            
+            newItems.add(
+              VegetableItem(
+                id: i + 1,
+                weight: weight,
+                time: timeString,
+                itemType: 'Sayur',
+              )
+            );
+          }
+        } else {
+          final doc = snapshot.docs.first;
           final data = doc.data() as Map<String, dynamic>;
-          final timestamp = (data['timestamp'] as Timestamp).toDate();
-          final timeString = DateFormat('HH:mm:ss').format(timestamp);
-          final weight = (data['weight'] ?? 'xx').toString();
+          final totalWeight = data['total_weight'];
           
-          newItems.add(
-            VegetableItem(
-              id: i + 1,
-              weight: weight,
-              time: timeString,
-            )
-          );
+          if (totalWeight != null && totalWeight > 0) {
+            final timeString = DateFormat('HH:mm:ss').format(DateTime.now());
+            
+            newItems.add(
+              VegetableItem(
+                id: 1,
+                weight: totalWeight.toString(),
+                time: timeString,
+                itemType: 'Rompes',
+              )
+            );
+          }
         }
         
         setState(() {
           _detectedItems = newItems;
           _isLoading = false;
         });
-        print('DEBUG: Updated _detectedItems with ${newItems.length} items');
       } else {
-        print('DEBUG: No weight documents found');
         setState(() {
           _isLoading = false;
         });
@@ -114,9 +127,7 @@ class _WeighingPageState extends State<WeighingPage> {
       setState(() {
         _isLoading = false;
       });
-    });
-    
-    print('DEBUG: Weight listener setup complete');
+    });    
   }
 
   // Complete the current batch and navigate to camera page
@@ -126,16 +137,27 @@ class _WeighingPageState extends State<WeighingPage> {
       
       if (!result['success']) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(result['message'] ?? 'Failed to complete weighing session'))
+          SnackBar(content: Text(result['message'] ?? 'Gagal menyelesaikan sesi penimbangan'))
         );
         return;
       }
       
-      // Navigate to camera page WITH batch_id
-      Navigator.push(
-        context, 
-        MaterialPageRoute(builder: (context) => CameraPage(batchId: _batchId!))
-      );
+      if (_sessionType == 'product') {
+        Navigator.push(
+          context, 
+          MaterialPageRoute(builder: (context) => CameraPage(batchId: _batchId!))
+        );
+      } else {
+        // For rompes, go directly to dashboard
+        Navigator.pushNamedAndRemoveUntil(
+          context, 
+          '/dashboard', 
+          (route) => false,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Penimbangan rompes selesai'))
+        );
+      }
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('No active weighing session'))
@@ -151,8 +173,9 @@ class _WeighingPageState extends State<WeighingPage> {
         barrierDismissible: false,
         builder: (BuildContext context) {
           return Dialog(
+            backgroundColor: Colors.white,
             shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20.0),
+              borderRadius: BorderRadius.circular(12.0),
             ),
             child: Container(
               padding: const EdgeInsets.all(20),
@@ -162,27 +185,18 @@ class _WeighingPageState extends State<WeighingPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
-                      IconButton(
-                        icon: const Icon(Icons.close),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          Navigator.of(context).pop(); // balik ke dashboard
-                        },
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
+                      const Text(
+                        'Mau Menimbang Apa?',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
                     ],
                   ),
+                  const SizedBox(height: 16),
                   const Text(
-                    'Mau menimbang apa?',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Pilih "Produk" jika sekarang Anda ingin menimbang sayur yang akan dikemas',
+                    'Pilih "Produk" untuk sayur yang akan dikemas atau "Rompes" untuk sayur yang defect',
                     style: TextStyle(
                       color: Colors.grey,
                       fontSize: 14,
@@ -201,7 +215,7 @@ class _WeighingPageState extends State<WeighingPage> {
                           setState(() {
                             _showDialog = false;
                           });
-                          _initializeBatchAndListenForWeights();
+                          _initializeBatchAndListenForWeights('product');
                         }
                       ),
                       _buildOptionButton(
@@ -212,8 +226,7 @@ class _WeighingPageState extends State<WeighingPage> {
                           setState(() {
                             _showDialog = false;
                           });
-                          // nanti bakal diganti utk logic rompes
-                          _initializeBatchAndListenForWeights();
+                          _initializeBatchAndListenForWeights('rompes');
                         }
                       ),
                     ],
@@ -239,17 +252,17 @@ class _WeighingPageState extends State<WeighingPage> {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(12),
-          border: Border.all(color: Colors.grey.shade300),
+          border: Border.all(color: AppTheme.greyColor, width: 0.5),
         ),
         child: Column(
           children: [
-            Icon(icon, size: 48, color: const Color(0xFF3F7C35)),
-            const SizedBox(height: 8),
+            Icon(icon, size: 48, color: AppTheme.primaryColor),
+            const SizedBox(height: 8, width: 8),
             Text(
               label,
               style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w500,
+                fontSize: 13,
+                fontWeight: FontWeight.w600,
               ),
             ),
           ],
@@ -269,8 +282,9 @@ class _WeighingPageState extends State<WeighingPage> {
         title: const Text(
           'Timbang Sayuran',
           style: TextStyle(
+            fontSize: 24,
             color: Colors.black,
-            fontWeight: FontWeight.bold,
+            fontWeight: FontWeight.w600
           ),
         ),
         centerTitle: true,
@@ -283,7 +297,7 @@ class _WeighingPageState extends State<WeighingPage> {
             const Expanded(
               child: Center(
                 child: Text(
-                  'Silakan pilih jenis penimbangan',
+                  'Pilih jenis penimbangan',
                   style: TextStyle(
                     fontSize: 16,
                     color: Colors.grey,
@@ -292,11 +306,11 @@ class _WeighingPageState extends State<WeighingPage> {
               ),
             )
           else ...[
-            const Padding(
-              padding: EdgeInsets.all(16.0),
+            Padding(
+              padding: const EdgeInsets.all(16.0),
               child: Text(
-                'Sedang menimbang...',
-                style: TextStyle(
+                _sessionType == 'product' ? 'Sedang menimbang produk...' : 'Sedang menimbang rompes...',
+                style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
                 ),
@@ -329,19 +343,21 @@ class _WeighingPageState extends State<WeighingPage> {
                       ),
                     )
                   : _detectedItems.isEmpty
-                      ? const Center(
+                      ? Center(
                           child: Column(
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                Icons.scale,
+                                _sessionType == 'product' ? Icons.scale : Icons.recycling,
                                 size: 64,
                                 color: Colors.grey,
                               ),
-                              SizedBox(height: 16),
+                              const SizedBox(height: 16),
                               Text(
-                                'Letakkan sayur di atas timbangan',
-                                style: TextStyle(
+                                _sessionType == 'product' 
+                                    ? 'Letakkan sayur di atas timbangan'
+                                    : 'Letakkan rompes di atas timbangan',
+                                style: const TextStyle(
                                   color: Colors.grey,
                                   fontSize: 16,
                                 ),
@@ -367,14 +383,14 @@ class _WeighingPageState extends State<WeighingPage> {
               child: ElevatedButton.icon(
                 onPressed: _navigateToCameraPage,
                 icon: const Icon(Icons.check),
-                label: const Text('Selesai Menimbang'),
+                label: Text(_sessionType == 'product' ? 'Selesai Menimbang' : 'Selesai'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF1E5128),
                   foregroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                   ),
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
                 ),
               ),
             )
@@ -384,20 +400,20 @@ class _WeighingPageState extends State<WeighingPage> {
   }
 }
 
-// Model class for vegetable items tetap sama
+// Model class for vegetable items
 class VegetableItem {
   final int id;
   final String weight;
   final String time;
+  final String itemType;
 
   VegetableItem({
     required this.id,
     required this.weight,
-    required this.time,
+    required this.time, 
+    this.itemType = 'Produk',
   });
 }
-
-// VegetableListItem widget tetap sama
 class VegetableListItem extends StatelessWidget {
   final VegetableItem vegetable;
 
@@ -435,7 +451,9 @@ class VegetableListItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Sayur ${vegetable.id} terdeteksi',
+                  vegetable.itemType == 'Rompes' 
+                    ? 'Rompes terdeteksi'
+                    : '${vegetable.itemType} ${vegetable.id} terdeteksi',
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,
                     fontSize: 16,

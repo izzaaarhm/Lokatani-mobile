@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../services/auth_services.dart';
+import '../config/app_theme.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -45,15 +46,24 @@ class _LoginScreenState extends State<LoginScreen> {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
-            title: Text('Email Verification Required'),
+            backgroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            title: Text('Verifikasi Email Anda'),
             content: Text(
-                'Silahkan cek email Anda untuk verifikasi akun. Jika belum menerima email, silahkan klik "Resend Email".'),
+                'Silakan periksa kotak masuk email Anda untuk verifikasi akun. Jika belum menerima email, silahkan klik "Kirim Ulang Email".'),
             actions: [
               TextButton(
                 onPressed: () {
                   Navigator.of(context).pop();
                 },
-                child: Text('OK'),
+                child: Text(
+                  'OK',
+                  style: TextStyle(
+                    color: Color(0xFF326229),
+                  ),
+                ),
               ),
               TextButton(
                 onPressed: () async {
@@ -63,7 +73,12 @@ class _LoginScreenState extends State<LoginScreen> {
                   ScaffoldMessenger.of(context).showSnackBar(SnackBar(
                       content: Text('Email verifikasi telah dikirim ulang.')));
                 },
-                child: Text('Resend Email'),
+                child: Text(
+                  'Kirim Ulang Email',
+                  style: TextStyle(
+                    color: Color(0xFF326229),
+                  ),
+                ),
               ),
             ],
           ),
@@ -96,6 +111,7 @@ class _LoginScreenState extends State<LoginScreen> {
       context: context,
       builder: (BuildContext context) {
         return Dialog(
+          backgroundColor: Colors.white,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
@@ -177,15 +193,21 @@ class _LoginScreenState extends State<LoginScreen> {
                   children: [
                     // Cancel button
                     Expanded(
-                      child: TextButton(
+                      child: ElevatedButton(
                         onPressed: () => Navigator.of(context).pop(),
-                        style: TextButton.styleFrom(
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: AppTheme.lightGrey,
                           padding: const EdgeInsets.symmetric(vertical: 12),
+                          side: BorderSide(color: AppTheme.greyColor, width: 0.5),
                         ),
-                        child: const Text('Batal'),
+                        child: const Text(
+                          'Batal',
+                          style: TextStyle(color: AppTheme.greyColor),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 16),
+
                     // Send email button
                     Expanded(
                       child: ElevatedButton(
@@ -205,7 +227,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           }
                         },
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF326229),
+                          backgroundColor: AppTheme.primaryColor,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
                         child: const Text(
@@ -252,13 +274,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       children: [
                         Image.asset(
                           'assets/images/logo-1.png',
-                          height: 140,
+                          height: 130,
                         ),
-                        const SizedBox(height: 16),
+                        const SizedBox(height: 14),
                         const Text(
-                          'Aplikasi Timbangan Sayur',
+                          'LokaScale - Aplikasi Timbangan Sayur',
                           style: TextStyle(
-                            fontSize: 18,
+                            fontSize: 19,
                             fontWeight: FontWeight.bold,
                             color: Color(0xFF326229),
                           ),
@@ -285,22 +307,26 @@ class _LoginScreenState extends State<LoginScreen> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         // Header
-                        const Text(
-                          'Masuk ke akun Anda',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: Color(0xFF326229),
+                        Align(
+                          alignment: Alignment.center,
+                          child: const Text(
+                            'Masuk ke akun Anda',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                              color: Color(0xFF326229),
+                            ),
+                            textAlign: TextAlign.center,
                           ),
-                          textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 24),
 
+                        const SizedBox(height: 24),
+                        
                         // Email field
                         const Text(
                           'Email',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
                         ),
@@ -319,7 +345,7 @@ class _LoginScreenState extends State<LoginScreen> {
                         const Text(
                           'Password',
                           style: TextStyle(
-                            fontSize: 14,
+                            fontSize: 15,
                             fontWeight: FontWeight.w500,
                           ),
                         ),

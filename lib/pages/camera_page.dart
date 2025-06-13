@@ -7,6 +7,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:intl/intl.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:path/path.dart' as path;
+import 'package:lokatech_timbangan/config/app_theme.dart';
 import 'package:lokatech_timbangan/pages/weighing_result.dart';
 import 'package:lokatech_timbangan/services/ml_services.dart';
 import 'package:lokatech_timbangan/services/batch_services.dart';
@@ -44,12 +45,6 @@ class _CameraPageState extends State<CameraPage> {
         _isCameraInitialized = true;
       });
     }
-  }
-
-  Future<File> _cropToSquare(String imagePath) async {
-    // This function is no longer used, but you can keep it for reference or remove it.
-    // return File(imagePath);
-    throw UnimplementedError('Cropping is disabled');
   }
 
   Future<XFile?> _compressImage(File file) async {
@@ -192,7 +187,7 @@ class _CameraPageState extends State<CameraPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.black,
-      appBar: AppBar(title: const Text('Pindai Sayuran')),
+      appBar: AppBar(title: const Text('Pindai Sayuran', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.black,),)),
       body: _isCameraInitialized
           ? Stack(
               children: [
@@ -294,29 +289,42 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Timbang Sayuran'),
+        title: const Text(
+          'Verifikasi Foto',
+          style: TextStyle(
+            fontSize: 24,
+            color: Colors.black,
+            fontWeight: FontWeight.w600
+          ),
+        ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Padding(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(25),
         child: Column(
           children: [
             const Text(
-              'Verifikasi Foto\nApakah fotonya terlihat jelas?',
+              'Apakah fotonya terlihat jelas?',
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 18),
+              style: TextStyle(fontSize: 20),
             ),
             const SizedBox(height: 16),
             // Tampilkan foto dalam container square
             Container(
-              width: 300,
-              height: 300,
+              width: 250,
+              height: 250,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: Colors.grey.shade300),
+                borderRadius: BorderRadius.circular(20),
+                boxShadow: [
+                        BoxShadow(
+                          color: Colors.black.withOpacity(0.5),
+                          blurRadius: 5,
+                          offset: const Offset(0, 2),
+                        ),
+                      ],
               ),
               child: ClipRRect(
                 borderRadius: BorderRadius.circular(12),
@@ -326,7 +334,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            const SizedBox(height: 16),
             Text(
               'Ukuran file: $fileSize',
               style: const TextStyle(
@@ -334,21 +342,31 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
                 fontSize: 14,
               ),
             ),
-            const SizedBox(height: 16),
+            const SizedBox(height: 30),
             Row(
               children: [
+                //retake photo
                 Expanded(
-                  child: OutlinedButton.icon(
-                    icon: const Icon(Icons.camera_alt),
-                    label: const Text('Foto Ulang'),
+                  child: ElevatedButton.icon(
+                    icon: const Icon(Icons.camera_alt, color: AppTheme.primaryColor,),
+                    label: const Text('Foto Ulang', style: TextStyle(color: AppTheme.primaryColor)),
                     onPressed: () => Navigator.pop(context),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.lightGrey,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      side: BorderSide(color: AppTheme.primaryColor, width: 1.5),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 16),
                 Expanded(
                   child: ElevatedButton.icon(
-                    icon: const Icon(Icons.check),
-                    label: const Text('Kirim Foto'),
+                    icon: const Icon(Icons.check, color: AppTheme.backgroundColor,),
+                    label: const Text('Kirim Foto', style: TextStyle(color: AppTheme.backgroundColor)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppTheme.primaryColor,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                    ),
                     onPressed: () async {
                       final photoSentTime = DateTime.now();
                       final photoSentTimeStr = DateFormat('HH:mm:ss').format(photoSentTime);
@@ -405,7 +423,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
             builder: (context) => WeighingResultPage(
               imagePath: data['image_url'] ?? widget.imagePath,
               vegetableName: vegetableType,
-              totalWeight: '${data['total_weight'] ?? 0} Kg',
+              totalWeight: '${data['total_weight'] ?? 0} Gram',
               weighingDate: data['created_at'] != null
                   ? DateFormat('dd-MM-yyyy').format((data['created_at'] as Timestamp).toDate())
                   : 'Unknown date',
