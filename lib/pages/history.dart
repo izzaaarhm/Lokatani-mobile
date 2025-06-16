@@ -33,18 +33,51 @@ class _HistoryScreenState extends State<HistoryScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        final snapshot = await FirebaseFirestore.instance
-            .collection('vegetable_batches')
-            .where('user_id', isEqualTo: user.uid)
-            .orderBy('created_at', descending: true)
-            .get();
+        // Load both vegetable and rompes batches
+        final [vegetableBatchesSnapshot, rompesBatchesSnapshot] = await Future.wait([
+          FirebaseFirestore.instance
+              .collection('vegetable_batches')
+              .where('user_id', isEqualTo: user.uid)
+              .orderBy('created_at', descending: true)
+              .get(),
+          FirebaseFirestore.instance
+              .collection('rompes_batches')
+              .where('user_id', isEqualTo: user.uid)
+              .orderBy('created_at', descending: true)
+              .get(),
+        ]);
+
+        // Combine both collections
+        final allDocs = <DocumentSnapshot>[];
+        allDocs.addAll(vegetableBatchesSnapshot.docs);
+        allDocs.addAll(rompesBatchesSnapshot.docs);
+
+        // Sort by created_at descending
+        allDocs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTime = aData['created_at'] as Timestamp?;
+          final bTime = bData['created_at'] as Timestamp?;
+          
+          if (aTime == null && bTime == null) return 0;
+          if (aTime == null) return 1;
+          if (bTime == null) return -1;
+          
+          return bTime.compareTo(aTime);
+        });
 
         // Filter out batches without valid weighing data
-        final validBatches = snapshot.docs.where((batch) {
-          final data = batch.data();
+        final validBatches = allDocs.where((batch) {
+          final data = batch.data() as Map<String, dynamic>;
           final totalWeight = data['total_weight'];
-          final vegetableType = data['vegetable_type'];
           
+          // For rompes, we don't need vegetable_type validation
+          if (batch.reference.parent.id == 'rompes_batches') {
+            return totalWeight != null && totalWeight > 0;
+          }
+          
+          // For vegetable batches, keep existing validation
+          final vegetableType = data['vegetable_type'];
           return totalWeight != null && 
                  totalWeight > 0 && 
                  vegetableType != null && 
@@ -190,12 +223,22 @@ class _HistoryScreenState extends State<HistoryScreen> {
 
   Widget _buildHistoryItem(DocumentSnapshot batch) {
     final data = batch.data() as Map<String, dynamic>;
-    final vegetableType = data['vegetable_type'] ?? 'Unknown';
-    final imageUrl = data['image_url'];
     final totalWeight = data['total_weight']?.toString() ?? 'xx';
     final createdAt = data['created_at'] != null
         ? DateFormat('EEEE, dd-MM-yyyy', 'id_ID').format((data['created_at'] as Timestamp).toDate())
         : 'Unknown date';
+
+    // Determine batch type and display info
+    String vegetableType;
+    String? imageUrl;
+    
+    if (batch.reference.parent.id == 'rompes_batches') {
+      vegetableType = 'Sayur Rompes';
+      imageUrl = null; // Rompes don't have images
+    } else {
+      vegetableType = data['vegetable_type'] ?? 'Unknown';
+      imageUrl = data['image_url'];
+    }
 
     return InkWell(
       onTap: () {
@@ -225,7 +268,7 @@ class _HistoryScreenState extends State<HistoryScreen> {
             height: 48,
             decoration: BoxDecoration(
               borderRadius: BorderRadius.circular(8),
-              color: imageUrl != null ? null : Colors.green[100],
+              color: imageUrl != null ? null :  Color.fromARGB(255, 245, 240, 229),
               image: imageUrl != null
                   ? DecorationImage(
                       image: NetworkImage(imageUrl),

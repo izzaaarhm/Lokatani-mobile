@@ -59,24 +59,55 @@ class _DashboardScreenState extends State<DashboardScreen> {
     try {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Pastikan user sudah terautentikasi dengan benar
         await user.reload();
 
-        // Get recent batches from Firestore
-        final snapshot = await FirebaseFirestore.instance
-            .collection('vegetable_batches')
-            .where('user_id', isEqualTo: user.uid)
-            .orderBy('created_at', descending: true)
-            .limit(10) // Get more to account for filtering
-            .get();
+        // Load both vegetable and rompes batches
+        final [vegetableBatchesSnapshot, rompesBatchesSnapshot] = await Future.wait([
+          FirebaseFirestore.instance
+              .collection('vegetable_batches')
+              .where('user_id', isEqualTo: user.uid)
+              .orderBy('created_at', descending: true)
+              .limit(5)
+              .get(),
+          FirebaseFirestore.instance
+              .collection('rompes_batches')
+              .where('user_id', isEqualTo: user.uid)
+              .orderBy('created_at', descending: true)
+              .limit(5)
+              .get(),
+        ]);
+
+        // Combine both collections
+        final allDocs = <DocumentSnapshot>[];
+        allDocs.addAll(vegetableBatchesSnapshot.docs);
+        allDocs.addAll(rompesBatchesSnapshot.docs);
+
+        // Sort by created_at descending
+        allDocs.sort((a, b) {
+          final aData = a.data() as Map<String, dynamic>;
+          final bData = b.data() as Map<String, dynamic>;
+          final aTime = aData['created_at'] as Timestamp?;
+          final bTime = bData['created_at'] as Timestamp?;
+          
+          if (aTime == null && bTime == null) return 0;
+          if (aTime == null) return 1;
+          if (bTime == null) return -1;
+          
+          return bTime.compareTo(aTime);
+        });
 
         // Filter out batches without valid weighing data
-        final validBatches = snapshot.docs.where((batch) {
-          final data = batch.data();
+        final validBatches = allDocs.where((batch) {
+          final data = batch.data() as Map<String, dynamic>;
           final totalWeight = data['total_weight'];
+          
+          // For rompes, we don't need vegetable_type validation
+          if (batch.reference.parent.id == 'rompes_batches') {
+            return totalWeight != null && totalWeight > 0;
+          }
+          
+          // For vegetable batches, keep existing validation
           final vegetableType = data['vegetable_type'];
-
-          // Only include batches that have valid data
           return totalWeight != null &&
               totalWeight > 0 &&
               vegetableType != null &&

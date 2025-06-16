@@ -80,26 +80,22 @@ class BatchService {
   }
 
   // Listen for weight changes from IoT device in Firestore while weighing
-  Stream<QuerySnapshot> listenForWeightUpdates(String batchId, String sessionType) {
-    print('DEBUG: Starting listener for batch: $batchId, type: $sessionType');
+  Stream<QuerySnapshot> listenForProductWeightUpdates(String batchId) {
+  print('DEBUG: Starting product weights listener for: $batchId');
+  return _firestore
+    .collection('vegetable_batches')
+    .doc(batchId)
+    .collection('weights')
+    .orderBy('timestamp', descending: false)
+    .snapshots();
+}
 
-    FirebaseAuth.instance.currentUser?.getIdToken(true);
-
-    if (sessionType == 'product') {
-      // For products: listen to weights subcollection for real-time updates
-      return _firestore
-        .collection('vegetable_batches')
-        .doc(batchId)
-        .collection('weights')
-        .orderBy('timestamp', descending: false)
-        .snapshots();
-    } else {
-      // For rompes: listen to the main document using query to get real-time total_weight updates
-      return _firestore
+  Stream<DocumentSnapshot> listenForRompesWeightUpdates(String batchId) {
+    print('DEBUG: Starting rompes document listener for: $batchId');
+    return _firestore
         .collection('rompes_batches')
-        .where(FieldPath.documentId, isEqualTo: batchId)
+        .doc(batchId)
         .snapshots();
-    }
   }
 
   // Listen for vegetable identification results in Firestore (only for product batches)

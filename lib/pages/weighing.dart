@@ -63,56 +63,39 @@ class _WeighingPageState extends State<WeighingPage> {
 
   // Listen for real-time weight updates from Firestore
   void _startListeningForWeightUpdates() {
-    if (_batchId == null || _sessionType == null) {
-      print('DEBUG: sessionid is null, cannot listen for weights');
-      return;
-    }
-  
-    print('DEBUG: Starting to listen for weights in batch: $_batchId, type: $_sessionType');
-    
-    _weightSubscription = _batchService.listenForWeightUpdates(_batchId!, _sessionType!)
+  if (_batchId == null || _sessionType == null) {
+    print('DEBUG: sessionid is null, cannot listen for weights');
+    return;
+  }
+
+  print('DEBUG: Starting to listen for weights in batch: $_batchId, type: $_sessionType');
+
+  if (_sessionType == 'product') {
+    // Use the existing query snapshot listener for products
+    _weightSubscription = _batchService.listenForProductWeightUpdates(_batchId!)
         .listen((snapshot) {
       print('DEBUG: Received weight snapshot with ${snapshot.docs.length} documents');
       
       if (snapshot.docs.isNotEmpty) {
         final newItems = <VegetableItem>[];
         
-        if (_sessionType == 'product') {
-          for (int i = snapshot.docs.length - 1; i >= 0; i--) {
-            final doc = snapshot.docs[i];
-            final data = doc.data() as Map<String, dynamic>;
-            final timestamp = (data['timestamp'] as Timestamp).toDate();
-            final timeString = DateFormat('HH:mm:ss').format(timestamp);
-            final weight = (data['weight'] ?? 'xx').toString();
-            
-            newItems.add(
-              VegetableItem(
-                id: i + 1,
-                weight: weight,
-                time: timeString,
-                itemType: 'Sayur',
-              )
-            );
-          }
-        } else {
-          final doc = snapshot.docs.first;
+        for (int i = snapshot.docs.length - 1; i >= 0; i--) {
+          final doc = snapshot.docs[i];
           final data = doc.data() as Map<String, dynamic>;
-          final totalWeight = data['total_weight'];
-          
-          if (totalWeight != null && totalWeight > 0) {
-            final timeString = DateFormat('HH:mm:ss').format(DateTime.now());
-            
-            newItems.add(
-              VegetableItem(
-                id: 1,
-                weight: totalWeight.toString(),
-                time: timeString,
-                itemType: 'Rompes',
-              )
-            );
-          }
+          final timestamp = (data['timestamp'] as Timestamp).toDate();
+          final timeString = DateFormat('HH:mm:ss').format(timestamp);
+          final weight = (data['weight'] ?? 'xx').toString();
+
+          newItems.add(
+            VegetableItem(
+              id: i + 1,
+              weight: weight,
+              time: timeString,
+              itemType: 'Sayur',
+            )
+          );
         }
-        
+
         setState(() {
           _detectedItems = newItems;
           _isLoading = false;
@@ -127,8 +110,65 @@ class _WeighingPageState extends State<WeighingPage> {
       setState(() {
         _isLoading = false;
       });
-    });    
+    });
+  } else {
+    // Use document snapshot listener for rompes
+    _weightSubscription = _batchService.listenForRompesWeightUpdates(_batchId!)
+        .listen((docSnapshot) {
+      print('DEBUG: Received rompes document snapshot, exists: ${docSnapshot.exists}');
+      
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data() as Map<String, dynamic>;
+        print('DEBUG: Rompes document data: $data');
+
+        final totalWeight = data['total_weight'];
+        final createdAt = data['created_at'];
+        final status = data['status'];
+
+        print('DEBUG: totalWeight: $totalWeight, createdAt: $createdAt, status: $status');
+
+        final newItems = <VegetableItem>[];
+
+        // Only show weight if it exists and is greater than 0
+        if (totalWeight != null && totalWeight > 0) {
+          String timeString = DateFormat('HH:mm:ss').format(DateTime.now());
+
+          if (createdAt != null) {
+            timeString = DateFormat('HH:mm:ss').format((createdAt as Timestamp).toDate());
+          }
+
+          newItems.add(
+            VegetableItem(
+              id: 1,
+              weight: totalWeight.toString(),
+              time: timeString,
+              itemType: 'Rompes',
+            )
+          );
+
+          print('DEBUG: Added rompes item with weight: $totalWeight');
+        }
+
+        setState(() {
+          _detectedItems = newItems;
+          _isLoading = false;
+        });
+
+        print('DEBUG: Updated UI with ${newItems.length} items');
+      } else {
+        print('DEBUG: Rompes document does not exist');
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }, onError: (error) {
+      print('DEBUG: Error listening for rompes updates: $error');
+      setState(() {
+        _isLoading = false;
+      });
+    });
   }
+}
 
   // Complete the current batch and navigate to camera page
   Future<void> _navigateToCameraPage() async {
@@ -348,7 +388,7 @@ class _WeighingPageState extends State<WeighingPage> {
                             mainAxisAlignment: MainAxisAlignment.center,
                             children: [
                               Icon(
-                                _sessionType == 'product' ? Icons.scale : Icons.recycling,
+                                _sessionType == 'product' ? Icons.scale : Icons.scale,
                                 size: 64,
                                 color: Colors.grey,
                               ),

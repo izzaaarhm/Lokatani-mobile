@@ -29,38 +29,63 @@ class _WeighingDetailScreenState extends State<WeighingDetailScreen> {
 
   Future<void> _loadBatchData(String batchId) async {
     try {
-      // Load batch data
-      final batchDoc = await FirebaseFirestore.instance
+      DocumentSnapshot? batchDoc;
+      List<Map<String, dynamic>> weights = [];
+      
+      // First try vegetable_batches collection
+      batchDoc = await FirebaseFirestore.instance
           .collection('vegetable_batches')
           .doc(batchId)
           .get();
           
-      if (!batchDoc.exists) {
-        setState(() => _isLoading = false);
-        return;
+      if (batchDoc.exists) {
+        // Load weights collection for vegetable batches
+        final weightsSnapshot = await FirebaseFirestore.instance
+            .collection('vegetable_batches')
+            .doc(batchId)
+            .collection('weights')
+            .orderBy('timestamp')
+            .get();
+            
+        weights = weightsSnapshot.docs.map((doc) {
+          final data = doc.data();
+          return {
+            'weight': data['weight'],
+            'timestamp': data['timestamp'],
+          };
+        }).toList();
+      } else {
+        // If not found in vegetable_batches, try rompes_batches
+        batchDoc = await FirebaseFirestore.instance
+            .collection('rompes_batches')
+            .doc(batchId)
+            .get();
+            
+        if (batchDoc.exists) {
+          // For rompes, there's no weights subcollection
+          // The weight data is stored directly in the document
+          final data = batchDoc.data() as Map<String, dynamic>;
+          final totalWeight = data['total_weight'];
+          final createdAt = data['created_at'];
+          
+          if (totalWeight != null && totalWeight > 0) {
+            weights = [{
+              'weight': totalWeight,
+              'timestamp': createdAt,
+            }];
+          }
+        }
       }
       
-      // Load weights collection
-      final weightsSnapshot = await FirebaseFirestore.instance
-          .collection('vegetable_batches')
-          .doc(batchId)
-          .collection('weights')
-          .orderBy('timestamp')
-          .get();
-          
-      final weights = weightsSnapshot.docs.map((doc) {
-        final data = doc.data();
-        return {
-          'weight': data['weight'],
-          'timestamp': data['timestamp'],
-        };
-      }).toList();
-      
-      setState(() {
-        _batchData = batchDoc.data() as Map<String, dynamic>;
-        _weightsData = weights;
-        _isLoading = false;
-      });
+      if (batchDoc?.exists == true) {
+        setState(() {
+          _batchData = batchDoc!.data() as Map<String, dynamic>;
+          _weightsData = weights;
+          _isLoading = false;
+        });
+      } else {
+        setState(() => _isLoading = false);
+      }
     } catch (e) {
       print('Error loading batch data: $e');
       setState(() => _isLoading = false);
