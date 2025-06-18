@@ -17,10 +17,18 @@ class _WeighingPageState extends State<WeighingPage> {
   bool _isLoading = false; 
   List<VegetableItem> _detectedItems = [];
   bool _showDialog = true;
+  bool _showVegetableTypeDialog = false;
   String? _batchId;
   String? _sessionType;
+  String? _selectedVegetableType;
   StreamSubscription? _weightSubscription;
   final BatchService _batchService = BatchService();
+  
+  // List of vegetable types for rompes selection
+  final List<Map<String, String>> _vegetableTypes = [
+    {'value': 'kale', 'label': 'Kale'},
+    {'value': 'bayam merah', 'label': 'Bayam Merah'},
+  ];
   
   @override
   void initState() {
@@ -37,16 +45,20 @@ class _WeighingPageState extends State<WeighingPage> {
   }
 
   // Initialize a new batch and start listening for weight updates
-  Future<void> _initializeBatchAndListenForWeights(String sessionType) async {
+  Future<void> _initializeBatchAndListenForWeights(String sessionType, {String? vegetableType}) async {
     setState(() {
       _isLoading = true;
     });
 
-    final result = await _batchService.initiateBatch(sessionType: sessionType);
+    final result = await _batchService.initiateBatch(
+      sessionType: sessionType,
+      vegetableType: vegetableType,
+    );
     
     if (result['success']) {
       _batchId = result['data']['session_id'];
       _sessionType = sessionType;
+      _selectedVegetableType = vegetableType;
       
       // Start listening for weight updates
       _startListeningForWeightUpdates();
@@ -63,112 +75,125 @@ class _WeighingPageState extends State<WeighingPage> {
 
   // Listen for real-time weight updates from Firestore
   void _startListeningForWeightUpdates() {
-  if (_batchId == null || _sessionType == null) {
-    print('DEBUG: sessionid is null, cannot listen for weights');
-    return;
-  }
+    if (_batchId == null || _sessionType == null) {
+      print('DEBUG: sessionid is null, cannot listen for weights');
+      return;
+    }
 
-  print('DEBUG: Starting to listen for weights in batch: $_batchId, type: $_sessionType');
+    print('DEBUG: Starting to listen for weights in batch: $_batchId, type: $_sessionType');
 
-  if (_sessionType == 'product') {
-    // Use the existing query snapshot listener for products
-    _weightSubscription = _batchService.listenForProductWeightUpdates(_batchId!)
-        .listen((snapshot) {
-      print('DEBUG: Received weight snapshot with ${snapshot.docs.length} documents');
-      
-      if (snapshot.docs.isNotEmpty) {
-        final newItems = <VegetableItem>[];
+    if (_sessionType == 'product') {
+      // Use the existing query snapshot listener for products
+      _weightSubscription = _batchService.listenForProductWeightUpdates(_batchId!)
+          .listen((snapshot) {
+        print('DEBUG: Received weight snapshot with ${snapshot.docs.length} documents');
         
-        for (int i = snapshot.docs.length - 1; i >= 0; i--) {
-          final doc = snapshot.docs[i];
-          final data = doc.data() as Map<String, dynamic>;
-          final timestamp = (data['timestamp'] as Timestamp).toDate();
-          final timeString = DateFormat('HH:mm:ss').format(timestamp);
-          final weight = (data['weight'] ?? 'xx').toString();
+        if (snapshot.docs.isNotEmpty) {
+          final newItems = <VegetableItem>[];
+          
+          for (int i = snapshot.docs.length - 1; i >= 0; i--) {
+            final doc = snapshot.docs[i];
+            final data = doc.data() as Map<String, dynamic>;
+            final timestamp = (data['timestamp'] as Timestamp).toDate();
+            final timeString = DateFormat('HH:mm:ss').format(timestamp);
+            final weight = (data['weight'] ?? 'xx').toString();
 
-          newItems.add(
-            VegetableItem(
-              id: i + 1,
-              weight: weight,
-              time: timeString,
-              itemType: 'Sayur',
-            )
-          );
-        }
-
-        setState(() {
-          _detectedItems = newItems;
-          _isLoading = false;
-        });
-      } else {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }, onError: (error) {
-      print('DEBUG: Error listening for weight updates: $error');
-      setState(() {
-        _isLoading = false;
-      });
-    });
-  } else {
-    // Use document snapshot listener for rompes
-    _weightSubscription = _batchService.listenForRompesWeightUpdates(_batchId!)
-        .listen((docSnapshot) {
-      print('DEBUG: Received rompes document snapshot, exists: ${docSnapshot.exists}');
-      
-      if (docSnapshot.exists) {
-        final data = docSnapshot.data() as Map<String, dynamic>;
-        print('DEBUG: Rompes document data: $data');
-
-        final totalWeight = data['total_weight'];
-        final createdAt = data['created_at'];
-        final status = data['status'];
-
-        print('DEBUG: totalWeight: $totalWeight, createdAt: $createdAt, status: $status');
-
-        final newItems = <VegetableItem>[];
-
-        // Only show weight if it exists and is greater than 0
-        if (totalWeight != null && totalWeight > 0) {
-          String timeString = DateFormat('HH:mm:ss').format(DateTime.now());
-
-          if (createdAt != null) {
-            timeString = DateFormat('HH:mm:ss').format((createdAt as Timestamp).toDate());
+            newItems.add(
+              VegetableItem(
+                id: i + 1,
+                weight: weight,
+                time: timeString,
+                itemType: 'Sayur',
+              )
+            );
           }
 
-          newItems.add(
-            VegetableItem(
-              id: 1,
-              weight: totalWeight.toString(),
-              time: timeString,
-              itemType: 'Rompes',
-            )
-          );
-
-          print('DEBUG: Added rompes item with weight: $totalWeight');
+          setState(() {
+            _detectedItems = newItems;
+            _isLoading = false;
+          });
+        } else {
+          setState(() {
+            _isLoading = false;
+          });
         }
-
-        setState(() {
-          _detectedItems = newItems;
-          _isLoading = false;
-        });
-
-        print('DEBUG: Updated UI with ${newItems.length} items');
-      } else {
-        print('DEBUG: Rompes document does not exist');
+      }, onError: (error) {
+        print('DEBUG: Error listening for weight updates: $error');
         setState(() {
           _isLoading = false;
         });
-      }
-    }, onError: (error) {
-      print('DEBUG: Error listening for rompes updates: $error');
-      setState(() {
-        _isLoading = false;
       });
-    });
+    } else {
+      // Use document snapshot listener for rompes
+      _weightSubscription = _batchService.listenForRompesWeightUpdates(_batchId!)
+          .listen((docSnapshot) {
+        print('DEBUG: Received rompes document snapshot, exists: ${docSnapshot.exists}');
+        
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data() as Map<String, dynamic>;
+          print('DEBUG: Rompes document data: $data');
+
+          final totalWeight = data['total_weight'];
+          final createdAt = data['created_at'];
+          final status = data['status'];
+
+          print('DEBUG: totalWeight: $totalWeight, createdAt: $createdAt, status: $status');
+
+          final newItems = <VegetableItem>[];
+
+          // Only show weight if it exists and is greater than 0
+          if (totalWeight != null && totalWeight > 0) {
+            String timeString = DateFormat('HH:mm:ss').format(DateTime.now());
+
+            if (createdAt != null) {
+              timeString = DateFormat('HH:mm:ss').format((createdAt as Timestamp).toDate());
+            }
+
+            // Display vegetable type if available
+            final vegetableTypeLabel = _getVegetableTypeLabel(_selectedVegetableType);
+
+            newItems.add(
+              VegetableItem(
+                id: 1,
+                weight: totalWeight.toString(),
+                time: timeString,
+                itemType: 'Rompes${vegetableTypeLabel.isNotEmpty ? ' ($vegetableTypeLabel)' : ''}',
+              )
+            );
+
+            print('DEBUG: Added rompes item with weight: $totalWeight');
+          }
+
+          setState(() {
+            _detectedItems = newItems;
+            _isLoading = false;
+          });
+
+          print('DEBUG: Updated UI with ${newItems.length} items');
+        } else {
+          print('DEBUG: Rompes document does not exist');
+          setState(() {
+            _isLoading = false;
+          });
+        }
+      }, onError: (error) {
+        print('DEBUG: Error listening for rompes updates: $error');
+        setState(() {
+          _isLoading = false;
+        });
+      });
+    }
   }
-}
+
+  // Get vegetable type label for display
+  String _getVegetableTypeLabel(String? vegetableType) {
+    if (vegetableType == null) return '';
+    final vegType = _vegetableTypes.firstWhere(
+      (veg) => veg['value'] == vegetableType,
+      orElse: () => {'label': ''},
+    );
+    return vegType['label'] ?? '';
+  }
 
   // Complete the current batch and navigate to camera page
   Future<void> _navigateToCameraPage() async {
@@ -183,7 +208,7 @@ class _WeighingPageState extends State<WeighingPage> {
       }
       
       if (_sessionType == 'product') {
-        Navigator.push(
+        Navigator.pushReplacement(
           context, 
           MaterialPageRoute(builder: (context) => CameraPage(batchId: _batchId!))
         );
@@ -222,17 +247,12 @@ class _WeighingPageState extends State<WeighingPage> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      const Text(
-                        'Mau Menimbang Apa?',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ],
+                  const Text(
+                    'Mau Menimbang Apa?',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                   const SizedBox(height: 16),
                   const Text(
@@ -265,8 +285,9 @@ class _WeighingPageState extends State<WeighingPage> {
                           Navigator.of(context).pop();
                           setState(() {
                             _showDialog = false;
+                            _showVegetableTypeDialog = true;
                           });
-                          _initializeBatchAndListenForWeights('rompes');
+                          _showVegetableTypeSelectionDialog();
                         }
                       ),
                     ],
@@ -278,6 +299,65 @@ class _WeighingPageState extends State<WeighingPage> {
         },
       );
     }
+  }
+
+  // Dialog to select vegetable type for rompes
+  void _showVegetableTypeSelectionDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.white,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12.0),
+          ),
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  'Pilih Jenis Sayuran',
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                const Text(
+                  'Pilih jenis sayuran rompes yang akan ditimbang',
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 14,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 24),
+                // Grid of vegetable type options
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: _vegetableTypes.map((vegType) {
+                    return _buildVegetableTypeButton(
+                      label: vegType['label']!,
+                      value: vegType['value']!,
+                      onTap: () {
+                        Navigator.of(context).pop();
+                        setState(() {
+                          _showVegetableTypeDialog = false;
+                        });
+                        _initializeBatchAndListenForWeights('rompes', vegetableType: vegType['value']);
+                      }
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
   }
 
   Widget _buildOptionButton({
@@ -297,7 +377,7 @@ class _WeighingPageState extends State<WeighingPage> {
         child: Column(
           children: [
             Icon(icon, size: 48, color: AppTheme.primaryColor),
-            const SizedBox(height: 8, width: 8),
+            const SizedBox(height: 8),
             Text(
               label,
               style: const TextStyle(
@@ -306,6 +386,31 @@ class _WeighingPageState extends State<WeighingPage> {
               ),
             ),
           ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildVegetableTypeButton({
+    required String label,
+    required String value,
+    required VoidCallback onTap
+  }) {
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: AppTheme.greyColor, width: 0.5),
+        ),
+        child: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w500,
+          ),
         ),
       ),
     );
@@ -332,8 +437,8 @@ class _WeighingPageState extends State<WeighingPage> {
       body: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Tampilkan dialog jika belum memilih tipe penimbangan
-          if (_showDialog)
+          // Show dialog selection state
+          if (_showDialog || _showVegetableTypeDialog)
             const Expanded(
               child: Center(
                 child: Text(
@@ -349,7 +454,9 @@ class _WeighingPageState extends State<WeighingPage> {
             Padding(
               padding: const EdgeInsets.all(16.0),
               child: Text(
-                _sessionType == 'product' ? 'Sedang menimbang produk...' : 'Sedang menimbang rompes...',
+                _sessionType == 'product' 
+                    ? 'Sedang menimbang produk...' 
+                    : 'Sedang menimbang rompes${_selectedVegetableType != null ? ' (${_getVegetableTypeLabel(_selectedVegetableType)})' : ''}...',
                 style: const TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.w500,
@@ -417,7 +524,7 @@ class _WeighingPageState extends State<WeighingPage> {
           ],
         ],
       ),
-      floatingActionButton: !_showDialog && !_isLoading && _detectedItems.isNotEmpty
+      floatingActionButton: !_showDialog && !_showVegetableTypeDialog && !_isLoading && _detectedItems.isNotEmpty
           ? Container(
               margin: const EdgeInsets.only(bottom: 60),
               child: ElevatedButton.icon(
@@ -454,6 +561,7 @@ class VegetableItem {
     this.itemType = 'Produk',
   });
 }
+
 class VegetableListItem extends StatelessWidget {
   final VegetableItem vegetable;
 
@@ -491,8 +599,8 @@ class VegetableListItem extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  vegetable.itemType == 'Rompes' 
-                    ? 'Rompes terdeteksi'
+                  vegetable.itemType.contains('Rompes') 
+                    ? '${vegetable.itemType} terdeteksi'
                     : '${vegetable.itemType} ${vegetable.id} terdeteksi',
                   style: const TextStyle(
                     fontWeight: FontWeight.w500,

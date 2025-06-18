@@ -148,10 +148,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           right: 0,
                           child: Container(
                             padding: const EdgeInsets.all(4),
-                            decoration: const BoxDecoration(
-                              color: Color(0xFF326229),
-                              shape: BoxShape.circle,
-                            ),
                           ),
                         ),
                       ],

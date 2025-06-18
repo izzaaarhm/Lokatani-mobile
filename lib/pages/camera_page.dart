@@ -185,76 +185,92 @@ class _CameraPageState extends State<CameraPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.black,
-      appBar: AppBar(title: const Text('Pindai Sayuran', style: TextStyle(fontSize: 24, fontWeight: FontWeight.w600, color: Colors.black,),)),
-      body: _isCameraInitialized
-          ? Stack(
-              children: [
-                _isProcessing
-                    ? const Center(
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            CircularProgressIndicator(),
-                            SizedBox(height: 8),
-                            Text(
-                              'Mengoptimalkan gambar...',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                          ],
+    return WillPopScope(
+      onWillPop: () async {
+        return false;
+      },
+      child: Scaffold(
+        backgroundColor: Colors.black,
+        appBar: AppBar(
+          // Remove the back button completely
+          automaticallyImplyLeading: false,
+          title: const Text(
+            'Pindai Sayuran', 
+            style: TextStyle(
+              fontSize: 24, 
+              fontWeight: FontWeight.w600, 
+              color: Colors.black,
+            ),
+          ),
+          centerTitle: true,
+        ),
+        body: _isCameraInitialized
+            ? Stack(
+                children: [
+                  _isProcessing
+                      ? const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              CircularProgressIndicator(),
+                              SizedBox(height: 8),
+                              Text(
+                                'Mengoptimalkan gambar...',
+                                style: TextStyle(color: Colors.white),
+                              ),
+                            ],
+                          ),
+                        )
+                      : _buildSquareCameraPreview(),
+                  Positioned(
+                    bottom: 30,
+                    left: 0,
+                    right: 0,
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        IconButton(
+                          icon: const Icon(Icons.photo, size: 32, color: Colors.white),
+                          onPressed: _pickFromGallery,
                         ),
-                      )
-                    : _buildSquareCameraPreview(),
-                Positioned(
-                  bottom: 30,
-                  left: 0,
-                  right: 0,
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      IconButton(
-                        icon: const Icon(Icons.photo, size: 32, color: Colors.white),
-                        onPressed: _pickFromGallery,
-                      ),
-                      GestureDetector(
-                        onTap: _takePicture,
-                        child: const Icon(Icons.radio_button_checked,
-                            color: Colors.white, size: 80),
-                      ),
-                      
-                      IconButton(
-                        icon: Icon(
-                          _flashMode == FlashMode.off ? Icons.flash_off : Icons.flash_on, 
-                          size: 32, 
-                          color: Colors.white
+                        GestureDetector(
+                          onTap: _takePicture,
+                          child: const Icon(Icons.radio_button_checked,
+                              size: 80, color: Colors.white),
                         ),
-                        onPressed: () async{
-                          FlashMode newMode = _flashMode == FlashMode.off ? FlashMode.torch : FlashMode.off;
-                          await _cameraController!.setFlashMode(newMode);
-                          setState(() {
-                            _flashMode = newMode;
-                          });
-                        },
-                      ),
-                    ],
-                  ),
-                ),
-                const Positioned(
-                  top: 100,
-                  left: 0,
-                  right: 0,
-                  child: Center(
-                    child: Text(
-                      'Posisikan sayur di dalam kotak\nuntuk memulai pendeteksian jenis sayur',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(color: Colors.white, fontSize: 16),
+                        IconButton(
+                          icon: Icon(
+                            _flashMode == FlashMode.off ? Icons.flash_off : Icons.flash_on, 
+                            size: 32, 
+                            color: Colors.white
+                          ),
+                          onPressed: () async{
+                            FlashMode newMode = _flashMode == FlashMode.off ? FlashMode.torch : FlashMode.off;
+                            await _cameraController!.setFlashMode(newMode);
+                            setState(() {
+                              _flashMode = newMode;
+                            });
+                          },
+                        ),
+                      ],
                     ),
                   ),
-                ),
-              ],
-            )
-          : const Center(child: CircularProgressIndicator()),
+                  const Positioned(
+                    top: 100,
+                    left: 0,
+                    right: 0,
+                    child: Center(
+                      child: Text(
+                        'Posisikan sayur di dalam kotak\nuntuk memulai pendeteksian jenis sayur',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.white, fontSize: 16),
+                      ),
+                    ),
+                  ),
+                ],
+              )
+            : const Center(child: CircularProgressIndicator()),
+      ),
     );
   }
 }
@@ -297,6 +313,7 @@ class _PhotoPreviewPageState extends State<PhotoPreviewPage> {
             fontWeight: FontWeight.w600
           ),
         ),
+        centerTitle: true,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),

@@ -9,7 +9,10 @@ class BatchService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
   // Start a new weighing batch session
-  Future<Map<String, dynamic>> initiateBatch({required String sessionType}) async {
+  Future<Map<String, dynamic>> initiateBatch({
+    required String sessionType,
+    String? vegetableType,
+  }) async {
     try {
       final String? token = await TokenService.getFirebaseIdToken();
       final String? userId = FirebaseAuth.instance.currentUser?.uid;
@@ -18,17 +21,30 @@ class BatchService {
         return {'success': false, 'message': 'Authentication required'};
       }
 
+      final Map<String, dynamic> requestBody = {
+        'user_id': userId,
+        'session_type': sessionType,
+      };
+
+      // Add vegetable_type ONLY if provided and not empty (for rompes sessions)
+      if (vegetableType != null && vegetableType.isNotEmpty) {
+        requestBody['vegetable_type'] = vegetableType;
+      }
+
+      print('DEBUG: Sending request body: ${jsonEncode(requestBody)}');
+
       final response = await http.post(
         Uri.parse('$baseUrl/weighing/initiate'),
         headers: {
           'Content-Type': 'application/json',
           'Authorization': 'Bearer $token',
         },
-        body: jsonEncode({
-          'user_id': userId,
-          'session_type': sessionType,
-        }),
+        // Use the requestBody you built above
+        body: jsonEncode(requestBody),
       );
+
+      print('DEBUG: Response status: ${response.statusCode}');
+      print('DEBUG: Response body: ${response.body}');
 
       final responseData = jsonDecode(response.body);
       if (response.statusCode == 200 || response.statusCode == 201) {

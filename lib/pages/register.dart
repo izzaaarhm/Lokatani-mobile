@@ -70,6 +70,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   style: TextStyle(
                     color: AppTheme.primaryColor,
                     fontWeight: FontWeight.w700,
+                    fontSize: 16
                   ),
                 ),
               ),
@@ -104,6 +105,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
           icon: const Icon(Icons.arrow_back),
           onPressed: () => Navigator.pop(context),
         ),
+        title: const Text(
+          'Registrasi User',
+          style: TextStyle(
+            fontSize: 24,
+            color:  Colors.black,
+            fontWeight: FontWeight.bold
+          ),
+        ),
+        centerTitle: true,
       ),
       body: SafeArea(
         child: SingleChildScrollView(
@@ -111,25 +121,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              // Header
-              const Text(
-                'Registrasi User',
-                style: TextStyle(
-                  fontSize: 24,
-                  fontWeight: FontWeight.bold,
-                  color: AppTheme.primaryColor
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Buat akun baru untuk mulai menimbang',
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey,
-                ),
-              ),
-              const SizedBox(height: 32),
-
               // Name field
               const Text(
                 'Nama',
@@ -220,6 +211,33 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       });
                     },
                   ),
+                ),
+              ),
+              const SizedBox(height: 6),
+
+              // Password requirements message
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.grey.shade50,
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Colors.grey.shade200),
+                ),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Icon(Icons.info_outline, color: Colors.grey.shade600, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        'Gunakan 8 atau lebih karakter, dengan perpaduan huruf (kapital dan kecil), angka, & simbol.',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.grey.shade700,
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
               ),
               

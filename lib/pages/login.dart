@@ -55,17 +55,6 @@ class _LoginScreenState extends State<LoginScreen> {
                 'Silakan periksa kotak masuk email Anda untuk verifikasi akun. Jika belum menerima email, silahkan klik "Kirim Ulang Email".'),
             actions: [
               TextButton(
-                onPressed: () {
-                  Navigator.of(context).pop();
-                },
-                child: Text(
-                  'OK',
-                  style: TextStyle(
-                    color: Color(0xFF326229),
-                  ),
-                ),
-              ),
-              TextButton(
                 onPressed: () async {
                   Navigator.of(context).pop();
                   // Resend verification email
@@ -77,6 +66,19 @@ class _LoginScreenState extends State<LoginScreen> {
                   'Kirim Ulang Email',
                   style: TextStyle(
                     color: Color(0xFF326229),
+                  ),
+                ),
+              ),
+
+              TextButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                },
+                child: Text(
+                  'OK',
+                  style: TextStyle(
+                    color: Color(0xFF326229),
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
@@ -106,141 +108,205 @@ class _LoginScreenState extends State<LoginScreen> {
 
   void _showForgotPasswordDialog(BuildContext context) {
     final TextEditingController _emailResetController = TextEditingController();
+    bool _isLoading = false;
     
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          backgroundColor: Colors.white,
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Header and close button
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
+                    // Header and close button
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Atur Ulang Kata Sandi',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        IconButton(
+                          icon: const Icon(Icons.close),
+                          onPressed: () => Navigator.of(context).pop(),
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                        ),
+                      ],
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Information box
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(Icons.info, color: Colors.blue, size: 20),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Masukkan alamat email yang terkait dengan akun Anda. '
+                              'Kami akan mengirimkan tautan untuk mengatur ulang kata sandi.',
+                              style: TextStyle(fontSize: 14),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 16),
+                    
+                    // Email field
                     const Text(
-                      'Atur Ulang Kata Sandi',
+                      'Email',
                       style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
                       ),
                     ),
-                    IconButton(
-                      icon: const Icon(Icons.close),
-                      onPressed: () => Navigator.of(context).pop(),
-                      padding: EdgeInsets.zero,
-                      constraints: const BoxConstraints(),
-                    ),
-                  ],
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Information box
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.shade50,
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.info, color: Colors.blue, size: 20),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          'Masukkan alamat email yang terkait dengan akun Anda. '
-                          'Kami akan mengirimkan tautan untuk mengatur ulang kata sandi.',
-                          style: TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-                
-                const SizedBox(height: 16),
-                
-                // Email field
-                const Text(
-                  'Email',
-                  style: TextStyle(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                TextField(
-                  controller: _emailResetController,
-                  keyboardType: TextInputType.emailAddress,
-                  decoration: const InputDecoration(
-                    hintText: 'Masukkan alamat email',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-                
-                const SizedBox(height: 24),
-                
-                // Buttons
-                Row(
-                  children: [
-                    // Cancel button
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.lightGrey,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                          side: BorderSide(color: AppTheme.greyColor, width: 0.5),
-                        ),
-                        child: const Text(
-                          'Batal',
-                          style: TextStyle(color: AppTheme.greyColor),
-                        ),
+                    const SizedBox(height: 8),
+                    TextField(
+                      controller: _emailResetController,
+                      keyboardType: TextInputType.emailAddress,
+                      decoration: const InputDecoration(
+                        hintText: 'Masukkan alamat email',
+                        border: OutlineInputBorder(),
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    
+                    const SizedBox(height: 24),
+                    
+                    // Buttons
+                    Row(
+                      children: [
+                        // Cancel button
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.lightGrey,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(color: AppTheme.greyColor, width: 0.5),
+                            ),
+                            child: const Text(
+                              'Batal',
+                              style: TextStyle(color: AppTheme.greyColor),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 16),
+                        // Send email button
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : () async {
+                              final email = _emailResetController.text.trim();
+                              
+                              if (email.isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(content: Text('Masukkan alamat email')),
+                                );
+                                return;
+                              }
 
-                    // Send email button
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          try {
-                            await FirebaseAuth.instance.sendPasswordResetEmail(
-                              email: _emailResetController.text.trim(),
-                            );
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text('Email reset password telah dikirim')),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.primaryColor,
-                          padding: const EdgeInsets.symmetric(vertical: 12),
+                              setState(() {
+                                _isLoading = true;
+                              });
+
+                              try {
+                                // Check if user exists with this email
+                                final signInMethods = await FirebaseAuth.instance.fetchSignInMethodsForEmail(email);
+                                
+                                if (signInMethods.isEmpty) {
+                                  // Email not registered
+                                  setState(() {
+                                    _isLoading = false;
+                                  });
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Email tidak terdaftar. Silakan periksa kembali alamat email Anda.'),
+                                      backgroundColor: Colors.red,
+                                    ),
+                                  );
+                                  return;
+                                }
+
+                                // Email exists, send password reset
+                                await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+                                
+                                setState(() {
+                                  _isLoading = false;
+                                });
+                                
+                                Navigator.of(context).pop();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Email reset password telah dikirim. Silakan periksa kotak masuk Anda.'),
+                                    backgroundColor: AppTheme.primaryColor,
+                                  ),
+                                );
+                              } catch (e) {
+                                setState(() {
+                                  _isLoading = false;
+                                });
+                                
+                                String errorMessage = 'Terjadi kesalahan. Silakan coba lagi.';
+                                if (e.toString().contains('invalid-email')) {
+                                  errorMessage = 'Format email tidak valid.';
+                                } else if (e.toString().contains('user-not-found')) {
+                                  errorMessage = 'Email tidak terdaftar.';
+                                }
+                                
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(errorMessage),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: _isLoading
+                                ? const SizedBox(
+                                    width: 20,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Text(
+                                    'Kirim Email',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                          ),
                         ),
-                        child: const Text(
-                          'Kirim Email',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
         );
       },
     );

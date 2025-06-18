@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../services/auth_services.dart';
+import '../config/app_theme.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -62,104 +63,287 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _showDeleteAccountDialog(BuildContext context) {
+    final TextEditingController _passwordController = TextEditingController();
+    bool _obscurePassword = true;
+    bool _isDeleting = false;
+
     showDialog(
       context: context,
       builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Close button
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ),
-                
-                const SizedBox(height: 10),
-                
-                // Message
-                const Text(
-                  'Hapus Akun',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Apakah Anda yakin ingin menghapus akun? Tindakan ini tidak dapat dibatalkan.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                
-                const SizedBox(height: 20),
-                
-                // Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.grey),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
+                    const Text(
+                          'Hapus Akun',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
                           ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
                         ),
-                        child: const Text('Batal'),
+                    const SizedBox(height: 10),
+                    // Warning container
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Icon(
+                            Icons.warning,
+                            color: Colors.red.shade600,
+                            size: 20,
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Tindakan ini akan menghapus akun Anda secara permanen dan tidak dapat dibatalkan.',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.red.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          try {
-                            // Delete the user account
-                            await FirebaseAuth.instance.currentUser?.delete();
-                            Navigator.of(context).pop();
-                            // Navigate to login screen
-                            Navigator.pushReplacementNamed(context, '/');
-                          } catch (e) {
-                            // The user may need to reauthenticate before deletion
-                            Navigator.of(context).pop();
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Error: $e')),
-                            );
-                          }
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Colors.red,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Hapus Akun',
-                          style: TextStyle(color: Colors.white),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Password confirmation section
+                    const Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text(
+                        'Masukkan kata sandi untuk konfirmasi',
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w500,
                         ),
                       ),
+                    ),
+                    const SizedBox(height: 8),
+                    
+                    TextField(
+                      controller: _passwordController,
+                      obscureText: _obscurePassword,
+                      decoration: InputDecoration(
+                        hintText: '••••••••',
+                        border: const OutlineInputBorder(),
+                        suffixIcon: IconButton(
+                          icon: Icon(
+                            _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey,
+                          ),
+                          onPressed: () {
+                            setState(() {
+                              _obscurePassword = !_obscurePassword;
+                            });
+                          },
+                        ),
+                      ),
+                    ),
+                    
+                    const SizedBox(height: 20),
+                    
+                    // Buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.lightGrey,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                              side: BorderSide(color: AppTheme.greyColor, width: 0.5),
+                            ),
+                            child: const Text(
+                              'Batal',
+                              style: TextStyle(color: AppTheme.greyColor),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: _isDeleting ? null : () async {
+                              if (_passwordController.text.trim().isEmpty) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  const SnackBar(
+                                    content: Text('Masukkan password untuk konfirmasi'),
+                                    backgroundColor: Colors.red,
+                                  ),
+                                );
+                                return;
+                              }
+
+                              setState(() {
+                                _isDeleting = true;
+                              });
+
+                              try {
+                                final user = FirebaseAuth.instance.currentUser;
+                                if (user != null && user.email != null) {
+                                  // Re-authenticate the user with their password
+                                  final credential = EmailAuthProvider.credential(
+                                    email: user.email!,
+                                    password: _passwordController.text.trim(),
+                                  );
+                                  
+                                  await user.reauthenticateWithCredential(credential);
+                                  
+                                  // Delete the user account
+                                  await user.delete();
+                                  
+                                  Navigator.of(context).pop();
+                                  Navigator.pushReplacementNamed(context, '/');
+                                  
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Akun berhasil dihapus'),
+                                      backgroundColor: Colors.green,
+                                    ),
+                                  );
+                                }
+                              } catch (e) {
+                                setState(() {
+                                  _isDeleting = false;
+                                });
+                                
+                                String errorMessage = 'Terjadi kesalahan saat menghapus akun';
+                                if (e.toString().contains('wrong-password') || 
+                                    e.toString().contains('invalid-credential')) {
+                                  errorMessage = 'Password salah. Silakan coba lagi.';
+                                }
+                                
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(errorMessage),
+                                    backgroundColor: const Color.fromRGBO(244, 67, 54, 1),
+                                  ),
+                                );
+                              }
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color.fromRGBO(179, 38, 30, 1),
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: _isDeleting
+                                ? const SizedBox(
+                                    width: 40,
+                                    height: 20,
+                                    child: CircularProgressIndicator(
+                                      strokeWidth: 2,
+                                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                                    ),
+                                  )
+                                : const Text(
+                                    'Hapus Akun Saya',
+                                    style: TextStyle(color: Colors.white),
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
                   ],
                 ),
-              ],
-            ),
-          ),
+              ),
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showLogoutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return Dialog(
+              backgroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                        const Text(
+                          'Log Out',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                    const SizedBox(height: 16),
+                    const Text(
+                      'Apakah Anda yakin ingin keluar? Anda perlu login kembali untuk menggunakan aplikasi',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(
+                        fontSize: 14,
+                        color: Colors.grey,
+                      ),
+                    ),
+                    
+                        const SizedBox(height: 20),                    
+                    // Buttons
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Expanded(
+                              child: ElevatedButton(
+                                onPressed: _isLoading ? null : () => Navigator.of(context).pop(),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.lightGrey,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  side: BorderSide(color: AppTheme.greyColor, width: 0.5),
+                                ),
+                                child: const Text(
+                                  'Batal',
+                                  style: TextStyle(color: AppTheme.greyColor),
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                        Expanded(
+                          child: ElevatedButton(
+                            onPressed: () async {
+                              await _authService.logout();
+                              Navigator.of(context).pop();
+                              Navigator.pushReplacementNamed(context, '/');
+                            },
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Theme.of(context).primaryColor,
+                              padding: const EdgeInsets.symmetric(vertical: 12),
+                            ),
+                            child: const Text(
+                              'Log out',
+                              style: TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),                
+            );
+          },
         );
       },
     );
@@ -242,16 +426,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     Icons.delete_outline,
                     'Hapus Akun',
                     () => _showDeleteAccountDialog(context),
-                    textColor: Colors.red,
-                    iconColor: Colors.red,
+                    textColor: const Color.fromRGBO(179, 38, 30, 1),
+                    iconColor: const Color.fromRGBO(179, 38, 30, 1),
                   ),
                   _buildSettingsItem(
                     context,
                     Icons.logout,
                     'Log Out',
                     () => _showLogoutDialog(context),
-                    textColor: Colors.red,
-                    iconColor: Colors.red,
+                    textColor: const Color.fromRGBO(179, 38, 30, 1),
+                    iconColor: const Color.fromRGBO(179, 38, 30, 1),
                   ),
                 ],
               ),
@@ -296,100 +480,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ],
         ),
       ),
-    );
-  }
-
-  void _showLogoutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return Dialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                // Close button
-                Align(
-                  alignment: Alignment.topRight,
-                  child: IconButton(
-                    icon: const Icon(Icons.close),
-                    onPressed: () => Navigator.of(context).pop(),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(),
-                  ),
-                ),
-                
-                const SizedBox(height: 10),
-                
-                // Message
-                const Text(
-                  'Log out',
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                  ),
-                ),
-                const SizedBox(height: 16),
-                const Text(
-                  'Apakah Anda yakin ingin keluar? Anda perlu login kembali untuk menggunakan aplikasi',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey,
-                  ),
-                ),
-                
-                const SizedBox(height: 20),
-                
-                // Buttons
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.of(context).pop(),
-                        style: OutlinedButton.styleFrom(
-                          side: const BorderSide(color: Colors.grey),
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text('Cancel'),
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        onPressed: () async {
-                          await _authService.logout();
-                          Navigator.of(context).pop();
-                          Navigator.pushReplacementNamed(context, '/');
-                        },
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: Theme.of(context).primaryColor,
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          padding: const EdgeInsets.symmetric(vertical: 12),
-                        ),
-                        child: const Text(
-                          'Log out',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
-        );
-      },
     );
   }
 }
