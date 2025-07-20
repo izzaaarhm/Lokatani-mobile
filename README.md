@@ -68,9 +68,9 @@ lib/
 
 - `firebase_core`, `firebase_auth`, `cloud_firestore` - Firebase integration
 - `http` - API communication
-- `flutter_secure_storage` - Secure data storage
-- `image_picker` - Camera functionality
-- `flutter_svg` - SVG rendering
+- `flutter_image_compress` - Compresses image
+- `image_picker` - Picking images from the image library
+- `camera` - Camera functionality
 
 For a complete list of dependencies, see the [`pubspec.yaml`](pubspec.yaml) file.
 
