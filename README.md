@@ -1,4 +1,4 @@
-# Lokatani Mobile App (Timbangan Sayur)
+# LokaScale - Aplikasi Timbangan Sayur
 
 A Flutter-based mobile application for vegetable weighing and identification. This app allows users to weigh vegetables, identify types of vegetables through machine learning, and track weighing history.
 
