@@ -79,10 +79,3 @@ For a complete list of dependencies, see the [`pubspec.yaml`](pubspec.yaml) file
 The app connects to a Flask backend for machine learning functionalities:
 - Base URL: `https://flask-backend-207122022079.asia-southeast2.run.app/api`
 - Endpoints for vegetable identification and data processing
-
-## Contributing
-
-Contributions to improve the application are welcome. Please feel free to submit a pull request.
-
-
-For help with Flutter development, check the [online documentation](https://docs.flutter.dev/), which offers tutorials, samples, and a full API reference.
